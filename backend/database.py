@@ -82,7 +82,7 @@ async def get_etf_history(code: str):
     async with get_db() as db:
         db.row_factory = aiosqlite.Row
         rows = await db.execute("""
-            SELECT date, open, high, low, close, volume, total_shares
+            SELECT code, date, open, high, low, close, volume, total_shares
             FROM etf_daily
             WHERE code = ?
             ORDER BY date ASC
