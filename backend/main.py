@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.database import init_db, get_all_etfs, get_etf_history
-from backend.models import ETFListResponse, ETFBasicResponse, ETFDaily
+from backend.database import init_db, get_all_etfs, get_etf_history, get_index_history
+from backend.models import ETFListResponse, ETFBasicResponse, ETFDaily, IndexDaily
 from backend.scheduler import setup_scheduler
-from backend.fetcher import fetch_and_store_etf_data
+from backend.fetcher import fetch_and_store_etf_data, fetch_and_store_index_data
 
 
 @asynccontextmanager
@@ -16,6 +16,9 @@ async def lifespan(app: FastAPI):
         etfs = await get_all_etfs()
         if not etfs:
             await fetch_and_store_etf_data()
+        idx = await get_index_history()
+        if not idx:
+            await fetch_and_store_index_data()
     except Exception:
         pass
     yield
@@ -44,10 +47,17 @@ async def etf_history(code: str):
     return [ETFDaily(**r) for r in records]
 
 
+@app.get("/api/index")
+async def index_history():
+    records = await get_index_history()
+    return [IndexDaily(**r) for r in records]
+
+
 @app.post("/api/refresh")
 async def refresh_data():
     count = await fetch_and_store_etf_data()
-    return {"status": "ok", "etf_count": count}
+    idx_count = await fetch_and_store_index_data()
+    return {"status": "ok", "etf_count": count, "index_count": idx_count}
 
 
 if __name__ == "__main__":

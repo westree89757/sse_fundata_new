@@ -78,3 +78,36 @@ async def fetch_and_store_etf_data():
             print(f"Failed to fetch history for {etf['code']} {etf['name']}: {e}")
 
     return len(etf_basic_list)
+
+
+async def fetch_and_store_index_data():
+    """拉取上证指数(000001)日线数据，存入数据库"""
+    from backend.database import upsert_index_daily, init_db
+
+    await init_db()
+
+    start_date = (datetime.now() - timedelta(days=365)).strftime("%Y%m%d")
+    end_date = datetime.now().strftime("%Y%m%d")
+
+    try:
+        df = ak.index_zh_a_hist(
+            symbol="000001",
+            period="daily",
+            start_date=start_date,
+            end_date=end_date,
+        )
+        records = []
+        for _, row in df.iterrows():
+            records.append({
+                "date": str(row["日期"]),
+                "open": float(row["开盘"]) if row.get("开盘") else None,
+                "high": float(row["最高"]) if row.get("最高") else None,
+                "low": float(row["最低"]) if row.get("最低") else None,
+                "close": float(row["收盘"]) if row.get("收盘") else None,
+                "volume": float(row["成交量"]) if row.get("成交量") else None,
+            })
+        await upsert_index_daily(records)
+        return len(records)
+    except Exception as e:
+        print(f"Failed to fetch index data: {e}")
+        return 0

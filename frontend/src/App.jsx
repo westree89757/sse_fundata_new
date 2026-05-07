@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import ETFGrid from "./components/ETFGrid";
 import TrendChart from "./components/TrendChart";
-import { fetchETFList, fetchETFHistory, triggerRefresh } from "./api";
+import { fetchETFList, fetchETFHistory, fetchIndexHistory, triggerRefresh } from "./api";
 
 export default function App() {
   const [etfs, setEtfs] = useState([]);
   const [selectedCode, setSelectedCode] = useState(null);
   const [history, setHistory] = useState([]);
+  const [indexData, setIndexData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -37,6 +38,9 @@ export default function App() {
 
   useEffect(() => {
     loadETFList();
+    fetchIndexHistory()
+      .then(setIndexData)
+      .catch(() => setIndexData([]));
   }, []);
 
   useEffect(() => {
@@ -75,7 +79,7 @@ export default function App() {
       </header>
       <main className="app__main">
         <ETFGrid etfs={etfs} selectedCode={selectedCode} onSelect={setSelectedCode} />
-        <TrendChart data={history} etfName={selectedETF?.name || ""} />
+        <TrendChart data={history} etfName={selectedETF?.name || ""} indexData={indexData} />
       </main>
     </div>
   );

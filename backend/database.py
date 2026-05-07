@@ -34,6 +34,17 @@ async def init_db():
                 UNIQUE(code, date)
             )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS index_daily (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL UNIQUE,
+                open REAL,
+                high REAL,
+                low REAL,
+                close REAL,
+                volume REAL
+            )
+        """)
         await db.commit()
 
 
@@ -87,4 +98,26 @@ async def get_etf_history(code: str):
             WHERE code = ?
             ORDER BY date ASC
         """, (code,))
+        return [dict(row) for row in await rows.fetchall()]
+
+
+async def upsert_index_daily(records: list[dict]):
+    async with get_db() as db:
+        for r in records:
+            await db.execute("""
+                INSERT OR REPLACE INTO index_daily (date, open, high, low, close, volume)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (r["date"], r.get("open"), r.get("high"),
+                  r.get("low"), r.get("close"), r.get("volume")))
+        await db.commit()
+
+
+async def get_index_history():
+    async with get_db() as db:
+        db.row_factory = aiosqlite.Row
+        rows = await db.execute("""
+            SELECT date, open, high, low, close, volume
+            FROM index_daily
+            ORDER BY date ASC
+        """)
         return [dict(row) for row in await rows.fetchall()]

@@ -13,6 +13,12 @@ export async function fetchETFHistory(code) {
   return res.json();
 }
 
+export async function fetchIndexHistory() {
+  const res = await fetch(`${BASE}/index`);
+  if (!res.ok) throw new Error(`Failed to fetch index history: ${res.status}`);
+  return res.json();
+}
+
 export async function triggerRefresh() {
   const res = await fetch(`${BASE}/refresh`, { method: "POST" });
   if (!res.ok) throw new Error(`Failed to refresh: ${res.status}`);

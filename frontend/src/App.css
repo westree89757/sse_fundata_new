@@ -117,11 +117,29 @@ body {
   font-weight: 600;
 }
 
-/* Chart */
+/* Charts */
+.charts-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .chart-container {
   background: #fff;
   border-radius: 8px;
   padding: 24px;
+}
+
+.chart__title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #475569;
+}
+
+.chart__range-row {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .chart__header {

@@ -27,3 +27,12 @@ class ETFBasicResponse(ETFBasic):
 
 class ETFListResponse(BaseModel):
     etfs: list[ETFBasicResponse]
+
+
+class IndexDaily(BaseModel):
+    date: str
+    open: Optional[float] = None
+    high: Optional[float] = None
+    low: Optional[float] = None
+    close: Optional[float] = None
+    volume: Optional[float] = None
