@@ -12,7 +12,6 @@ async def fetch_and_store_etf_data():
 
     # 1. 获取所有ETF基金信息
     df_info = ak.fund_etf_fund_daily_em()
-    # 过滤沪深300ETF
     mask = df_info["基金简称"].apply(
         lambda x: any(kw in str(x) for kw in CSI300_KEYWORDS)
     )
@@ -32,7 +31,8 @@ async def fetch_and_store_etf_data():
     # 取前7，优先按代码排序（大体量老牌 ETF 代码更小）
     df_csi300 = df_csi300.sort_values("基金代码").head(7)
 
-    # 获取当天净值列名
+    etf_codes = [str(c) for c in df_csi300["基金代码"].tolist()]
+
     today_str = datetime.now().strftime("%Y-%m-%d")
     nav_col = f"{today_str}-单位净值"
 
@@ -42,16 +42,15 @@ async def fetch_and_store_etf_data():
         etf_basic_list.append({
             "code": code,
             "name": str(row["基金简称"]),
-            "total_shares": None,  # AKShare 当前版本不直接提供份额数据
+            "total_shares": None,
             "nav": float(row[nav_col]) if nav_col in df_csi300.columns and row[nav_col] else None,
         })
-
-    await upsert_etf_basic(etf_basic_list)
 
     # 2. 拉取每只ETF近一年日线数据 (含成交量)
     start_date = (datetime.now() - timedelta(days=365)).strftime("%Y%m%d")
     end_date = datetime.now().strftime("%Y%m%d")
 
+    all_dates = []
     for etf in etf_basic_list:
         try:
             df_hist = ak.fund_etf_hist_em(
@@ -63,19 +62,92 @@ async def fetch_and_store_etf_data():
             )
             records = []
             for _, row in df_hist.iterrows():
+                date_str = str(row["日期"])
+                if date_str not in all_dates:
+                    all_dates.append(date_str)
                 records.append({
                     "code": etf["code"],
-                    "date": str(row["日期"]),
+                    "date": date_str,
                     "open": float(row["开盘"]) if row.get("开盘") else None,
                     "high": float(row["最高"]) if row.get("最高") else None,
                     "low": float(row["最低"]) if row.get("最低") else None,
                     "close": float(row["收盘"]) if row.get("收盘") else None,
                     "volume": float(row["成交量"]) if row.get("成交量") else None,
-                    "total_shares": etf["total_shares"],
+                    "total_shares": None,
                 })
             await upsert_etf_daily(records)
         except Exception as e:
             print(f"Failed to fetch history for {etf['code']} {etf['name']}: {e}")
+
+    # 3. 从上交所 API 拉取历史份额数据（每周抽样，约50个日期）
+    all_dates.sort()
+    sample_dates = all_dates[::5]  # 每5个交易日取一个
+    if all_dates[-1] not in sample_dates:
+        sample_dates.append(all_dates[-1])  # 确保包含最新日期
+
+    shares_map = {code: {} for code in etf_codes}
+    for date_str in sample_dates:
+        try:
+            df_scale = ak.fund_etf_scale_sse(date=date_str.replace("-", ""))
+            for code in etf_codes:
+                rows = df_scale[df_scale["基金代码"] == code]
+                if not rows.empty:
+                    shares_map[code][date_str] = float(rows.iloc[0]["基金份额"])
+        except Exception as e:
+            print(f"Failed SSE scale for {date_str}: {e}")
+
+    # 更新 etf_basic.total_shares 为最新可用份额
+    for etf in etf_basic_list:
+        latest_shares = None
+        for d in sorted(shares_map.get(etf["code"], {}).keys(), reverse=True):
+            if shares_map[etf["code"]][d] is not None:
+                latest_shares = shares_map[etf["code"]][d]
+                break
+        etf["total_shares"] = latest_shares
+
+    await upsert_etf_basic(etf_basic_list)
+
+    # 更新 etf_daily.total_shares (采样日期写入实际份额，中间日期后续插值)
+    from backend.database import upsert_etf_daily
+    for code in etf_codes:
+        share_records = []
+        s_map = shares_map[code]
+        if not s_map:
+            continue
+        sorted_dates = sorted(s_map.keys())
+        # 逐日插值
+        for i, date_str in enumerate(all_dates):
+            if date_str in s_map:
+                shares = s_map[date_str]
+            else:
+                # 找到前后两个采样日期进行线性插值
+                prev_date, prev_val = None, None
+                next_date, next_val = None, None
+                for d in sorted_dates:
+                    if d <= date_str:
+                        prev_date, prev_val = d, s_map[d]
+                for d in sorted_dates:
+                    if d >= date_str and (next_date is None or d < next_date):
+                        next_date, next_val = d, s_map[d]
+                if prev_val is not None and next_val is not None and prev_date != next_date:
+                    ratio = (all_dates.index(date_str) - all_dates.index(prev_date)) / max(
+                        all_dates.index(next_date) - all_dates.index(prev_date), 1
+                    )
+                    shares = prev_val + (next_val - prev_val) * ratio
+                elif prev_val is not None:
+                    shares = prev_val
+                elif next_val is not None:
+                    shares = next_val
+                else:
+                    shares = None
+            share_records.append({
+                "code": code,
+                "date": date_str,
+                "open": None, "high": None, "low": None, "close": None,
+                "volume": None,
+                "total_shares": shares,
+            })
+        await upsert_etf_daily(share_records)
 
     return len(etf_basic_list)
 

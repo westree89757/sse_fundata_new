@@ -4,7 +4,11 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(pkill -f \"uvicorn backend.main\")",
-      "Bash(pkill -f \"node.*vite\")"
+      "Bash(pkill -f \"node.*vite\")",
+      "Bash(npm run:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5173)",
+      "Bash(curl -s http://localhost:5173/api/index)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(f'{len\\(d\\)} index records via proxy'\\)\")"
     ]
   }
 }
