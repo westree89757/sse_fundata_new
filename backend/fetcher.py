@@ -11,28 +11,44 @@ async def fetch_and_store_etf_data():
     await init_db()
 
     # 1. 获取所有ETF基金信息
-    df_info = ak.fund_etf_fund_info_em()
+    df_info = ak.fund_etf_fund_daily_em()
     # 过滤沪深300ETF
     mask = df_info["基金简称"].apply(
         lambda x: any(kw in str(x) for kw in CSI300_KEYWORDS)
     )
     df_csi300 = df_info[mask].copy()
 
-    # 按基金份额排序取前7
-    df_csi300 = df_csi300.sort_values("基金份额", ascending=False).head(7)
+    if df_csi300.empty:
+        print("No CSI 300 ETFs found")
+        return 0
+
+    # 仅保留上交所 ETF (代码以5开头)
+    df_csi300 = df_csi300[df_csi300["基金代码"].astype(str).str.startswith("5")]
+
+    if df_csi300.empty:
+        print("No SSE CSI 300 ETFs found")
+        return 0
+
+    # 取前7，优先按代码排序（大体量老牌 ETF 代码更小）
+    df_csi300 = df_csi300.sort_values("基金代码").head(7)
+
+    # 获取当天净值列名
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    nav_col = f"{today_str}-单位净值"
 
     etf_basic_list = []
     for _, row in df_csi300.iterrows():
+        code = str(row["基金代码"])
         etf_basic_list.append({
-            "code": str(row["基金代码"]),
+            "code": code,
             "name": str(row["基金简称"]),
-            "total_shares": float(row["基金份额"]) if row["基金份额"] else None,
-            "nav": float(row["单位净值"]) if row.get("单位净值") else None,
+            "total_shares": None,  # AKShare 当前版本不直接提供份额数据
+            "nav": float(row[nav_col]) if nav_col in df_csi300.columns and row[nav_col] else None,
         })
 
     await upsert_etf_basic(etf_basic_list)
 
-    # 2. 拉取每只ETF近一年日线数据
+    # 2. 拉取每只ETF近一年日线数据 (含成交量)
     start_date = (datetime.now() - timedelta(days=365)).strftime("%Y%m%d")
     end_date = datetime.now().strftime("%Y%m%d")
 
