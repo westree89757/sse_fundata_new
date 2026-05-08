@@ -365,6 +365,51 @@ export default function TrendChart({ data, etfName, indexData }) {
         ) : (
           <div className="chart__empty">数据不足，需要至少 {ROLLING + 5} 个交易日</div>
         )}
+
+        {/* 操作指引面板 */}
+        {phaseData.length > 0 && (() => {
+          const currentPhase = phaseData[phaseData.length - 1]["阶段"];
+          const hasSignal = markers.length > 0;
+          const lastMarker = markers.length > 0 ? markers[markers.length - 1] : null;
+          const etfPct = phaseData[phaseData.length - 1]["ETF累计%"];
+          const idxPct = phaseData[phaseData.length - 1]["指数累计%"];
+
+          return (
+            <div className="guidance-panel">
+              <div className="guidance-title">操作指引</div>
+              <div className="guidance-body">
+                {currentPhase === "机构增持" && (
+                  <p>🟢 <b>机构正在增持</b> — 大资金在抄底。此时指数 {(idxPct > 0 ? "已上涨" : "在调整")} {Math.abs(idxPct).toFixed(0)}%。<br/>
+                  建议: 可分批建仓，这是中期入场窗口。规模越大 ETF 信号越可靠 (首选 510300/510310/510330)。</p>
+                )}
+                {currentPhase === "获利赎回" && (
+                  <p>🔴 <b>获利赎回中</b> — 机构正在落袋为安，但指数仍在趋势中 ({idxPct > 0 ? "+" : ""}{idxPct.toFixed(0)}%)。<br/>
+                  建议: <b>继续持有</b>，获利赎回 ≠ 卖出信号。如阶段持续超 4 周再考虑减仓。记住：减仓在历史上跑输满仓。</p>
+                )}
+                {currentPhase === "中性" && (
+                  <p>🟡 <b>中性观望</b> — 市场无明显方向，份额在正常区间波动。<br/>
+                  建议: 继续持仓，不做调整。中性可能持续数周，耐心等待下一信号。</p>
+                )}
+                {currentPhase === "—" && (
+                  <p>⏳ <b>数据积累中</b> — 当前区间数据不足，无法判定阶段。切换更长的时间范围(近13周/26周)查看。</p>
+                )}
+                {hasSignal && lastMarker && (
+                  <p className="guidance-signal">
+                    ⚡ <b>关键信号:</b> 检测到连续极端{lastMarker.type === "buy" ? "增持" : "赎回"}信号，历史上此类信号后续{' '}
+                    {lastMarker.type === "buy" ? "正收益概率 60-100%" : "需关注趋势是否衰竭"}。
+                  </p>
+                )}
+                <div className="guidance-rules">
+                  <div className="guidance-rule">🟢 增持 → 分批建仓</div>
+                  <div className="guidance-rule">🟡 中性 → 持有等待</div>
+                  <div className="guidance-rule">🔴 赎回 &lt;2周 → 继续持有</div>
+                  <div className="guidance-rule">🔴 赎回 &gt;4周 → 考虑减仓</div>
+                  <div className="guidance-rule">⚡ 连续5天信号 → 高可信度</div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

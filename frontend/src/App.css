@@ -217,6 +217,54 @@ body {
   font-weight: 600;
 }
 
+/* Guidance panel */
+.guidance-panel {
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.guidance-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+
+.guidance-body p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.guidance-signal {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.guidance-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.guidance-rule {
+  font-size: 11px;
+  padding: 3px 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  color: #475569;
+  white-space: nowrap;
+}
+
 .chart__range-row {
   display: flex;
   justify-content: flex-end;
