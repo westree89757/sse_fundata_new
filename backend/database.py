@@ -101,6 +101,17 @@ async def get_etf_history(code: str):
         return [dict(row) for row in await rows.fetchall()]
 
 
+async def update_etf_shares(records: list[dict]):
+    """仅更新 total_shares 列，不覆盖 OHLCV 数据"""
+    async with get_db() as db:
+        for r in records:
+            await db.execute("""
+                UPDATE etf_daily SET total_shares = ?
+                WHERE code = ? AND date = ?
+            """, (r["total_shares"], r["code"], r["date"]))
+        await db.commit()
+
+
 async def upsert_index_daily(records: list[dict]):
     async with get_db() as db:
         for r in records:

@@ -107,20 +107,18 @@ async def fetch_and_store_etf_data():
 
     await upsert_etf_basic(etf_basic_list)
 
-    # 更新 etf_daily.total_shares (采样日期写入实际份额，中间日期后续插值)
-    from backend.database import upsert_etf_daily
+    # 更新 etf_daily.total_shares (采样日期写入实际份额，中间日期插值)
+    from backend.database import update_etf_shares
     for code in etf_codes:
         share_records = []
         s_map = shares_map[code]
         if not s_map:
             continue
         sorted_dates = sorted(s_map.keys())
-        # 逐日插值
-        for i, date_str in enumerate(all_dates):
+        for date_str in all_dates:
             if date_str in s_map:
                 shares = s_map[date_str]
             else:
-                # 找到前后两个采样日期进行线性插值
                 prev_date, prev_val = None, None
                 next_date, next_val = None, None
                 for d in sorted_dates:
@@ -130,9 +128,10 @@ async def fetch_and_store_etf_data():
                     if d >= date_str and (next_date is None or d < next_date):
                         next_date, next_val = d, s_map[d]
                 if prev_val is not None and next_val is not None and prev_date != next_date:
-                    ratio = (all_dates.index(date_str) - all_dates.index(prev_date)) / max(
-                        all_dates.index(next_date) - all_dates.index(prev_date), 1
-                    )
+                    idx_curr = all_dates.index(date_str)
+                    idx_prev = all_dates.index(prev_date)
+                    idx_next = all_dates.index(next_date)
+                    ratio = (idx_curr - idx_prev) / max(idx_next - idx_prev, 1)
                     shares = prev_val + (next_val - prev_val) * ratio
                 elif prev_val is not None:
                     shares = prev_val
@@ -143,11 +142,9 @@ async def fetch_and_store_etf_data():
             share_records.append({
                 "code": code,
                 "date": date_str,
-                "open": None, "high": None, "low": None, "close": None,
-                "volume": None,
                 "total_shares": shares,
             })
-        await upsert_etf_daily(share_records)
+        await update_etf_shares(share_records)
 
     return len(etf_basic_list)
 
