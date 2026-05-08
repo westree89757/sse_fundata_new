@@ -55,22 +55,42 @@ function PhaseTooltip({ active, payload, label }) {
     <div className="custom-tooltip">
       <div className="tooltip-date">{label}</div>
       <div className="tooltip-row">
-        <span className="tooltip-label" style={{ color: "#10b981" }}>ETF累计</span>
+        <span className="tooltip-label">阶段</span>
+        <span className="tooltip-val">{data["阶段"] || "—"}</span>
+      </div>
+      <div className="tooltip-divider" />
+      <div className="tooltip-row">
+        <span className="tooltip-label" style={{ color: "#10b981" }}>ETF区间累计</span>
         <span className="tooltip-val" style={{ color: "#10b981" }}>
           {data["ETF累计%"] > 0 ? "+" : ""}{data["ETF累计%"]}%
         </span>
       </div>
       <div className="tooltip-row">
-        <span className="tooltip-label" style={{ color: "#ef4444" }}>上证累计</span>
+        <span className="tooltip-label" style={{ color: "#ef4444" }}>上证区间累计</span>
         <span className="tooltip-val" style={{ color: "#ef4444" }}>
           {data["指数累计%"] > 0 ? "+" : ""}{data["指数累计%"]}%
         </span>
       </div>
-      <div className="tooltip-divider" />
-      <div className="tooltip-row">
-        <span className="tooltip-label">阶段</span>
-        <span className="tooltip-val">{data["阶段"] || "—"}</span>
-      </div>
+      {data["增持起点"] && (
+        <>
+          <div className="tooltip-divider" />
+          <div className="tooltip-date" style={{ fontSize: 11, fontWeight: 400, color: "#64748b", marginBottom: 2 }}>
+            自 {data["增持起点"]} 机构增持以来
+          </div>
+          <div className="tooltip-row">
+            <span className="tooltip-label" style={{ color: "#10b981" }}>ETF收益</span>
+            <span className="tooltip-val" style={{ color: data["增持起点收益ETF%"] >= 0 ? "#10b981" : "#ef4444" }}>
+              {data["增持起点收益ETF%"] > 0 ? "+" : ""}{data["增持起点收益ETF%"]}%
+            </span>
+          </div>
+          <div className="tooltip-row">
+            <span className="tooltip-label" style={{ color: "#ef4444" }}>上证收益</span>
+            <span className="tooltip-val" style={{ color: data["增持起点收益指数%"] >= 0 ? "#ef4444" : "#10b981" }}>
+              {data["增持起点收益指数%"] > 0 ? "+" : ""}{data["增持起点收益指数%"]}%
+            </span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -175,15 +195,40 @@ export default function TrendChart({ data, etfName, indexData }) {
       else phaseMap.set(allDates[i + ROLLING], "中性");
     }
 
+    // 找出所有机构增持阶段的起点日期 (全量数据)
+    const zengchiStarts = [];
+    let inZC = false;
+    for (let i = 0; i < rollChg.length; i++) {
+      const ph = phaseMap.get(allDates[i + ROLLING]);
+      if (ph === "机构增持" && !inZC) {
+        zengchiStarts.push(allDates[i + ROLLING]);
+        inZC = true;
+      } else if (ph !== "机构增持") {
+        inZC = false;
+      }
+    }
+
     // 构建 phaseData (仅 selected range 内的数据)
     const sliced = allDates.slice(-days);
     const pData = sliced.map((date) => {
       const baseETF = etfMap.get(sliced[0]) / 1e8;
       const baseIdx = indexMap.get(sliced[0]);
+      // 找上一个机构增持起点
+      let lastZC = null;
+      for (const zc of zengchiStarts) {
+        if (zc <= date) lastZC = zc;
+      }
+      const zcETF = lastZC ? etfMap.get(lastZC) / 1e8 : null;
+      const zcIdx = lastZC ? indexMap.get(lastZC) : null;
+      const curETF = etfMap.get(date) / 1e8;
+      const curIdx = indexMap.get(date);
       return {
         date,
-        "ETF累计%": +((etfMap.get(date) / 1e8 / baseETF - 1) * 100).toFixed(2),
-        "指数累计%": +((indexMap.get(date) / baseIdx - 1) * 100).toFixed(2),
+        "ETF累计%": +((curETF / baseETF - 1) * 100).toFixed(2),
+        "指数累计%": +((curIdx / baseIdx - 1) * 100).toFixed(2),
+        "增持起点收益ETF%": lastZC && zcETF ? +((curETF / zcETF - 1) * 100).toFixed(2) : null,
+        "增持起点收益指数%": lastZC && zcIdx ? +((curIdx / zcIdx - 1) * 100).toFixed(2) : null,
+        "增持起点": lastZC,
         "阶段": phaseMap.get(date) || "—",
       };
     });
