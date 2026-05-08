@@ -137,6 +137,11 @@ body {
   color: #475569;
 }
 
+.chart__corr {
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .chart__range-row {
   display: flex;
   justify-content: flex-end;
