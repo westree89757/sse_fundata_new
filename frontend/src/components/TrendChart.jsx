@@ -9,9 +9,12 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceArea,
+  ReferenceDot,
 } from "recharts";
 
 const RANGE_OPTIONS = { 30: "近30天", 90: "近90天", 180: "近180天" };
+const ROLLING = 15; // 15日滚动窗口判断阶段
 
 function CompareTooltip({ active, payload, label }) {
   if (!active || !payload || payload.length === 0) return null;
@@ -44,8 +47,35 @@ function CompareTooltip({ active, payload, label }) {
   );
 }
 
+function PhaseTooltip({ active, payload, label }) {
+  if (!active || !payload || payload.length === 0) return null;
+  const data = payload[0].payload;
+  return (
+    <div className="custom-tooltip">
+      <div className="tooltip-date">{label}</div>
+      <div className="tooltip-row">
+        <span className="tooltip-label">ETF累计</span>
+        <span className="tooltip-val" style={{ color: data["ETF累计%"] >= 0 ? "#ef4444" : "#10b981" }}>
+          {data["ETF累计%"] > 0 ? "+" : ""}{data["ETF累计%"]}%
+        </span>
+      </div>
+      <div className="tooltip-row">
+        <span className="tooltip-label">上证累计</span>
+        <span className="tooltip-val" style={{ color: data["指数累计%"] >= 0 ? "#ef4444" : "#10b981" }}>
+          {data["指数累计%"] > 0 ? "+" : ""}{data["指数累计%"]}%
+        </span>
+      </div>
+      <div className="tooltip-divider" />
+      <div className="tooltip-row">
+        <span className="tooltip-label">阶段</span>
+        <span className="tooltip-val">{data["阶段"] || "—"}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function TrendChart({ data, etfName, indexData }) {
-  const [days, setDays] = useState(30);
+  const [days, setDays] = useState(90);
 
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
@@ -107,6 +137,107 @@ export default function TrendChart({ data, etfName, indexData }) {
     return den ? num / den : null;
   }, [compareData]);
 
+  // 阶段分析: 使用全部数据计算滚动份额变化，检测阶段和关键信号
+  const { phaseData, phaseAreas, markers } = useMemo(() => {
+    if (!data || data.length === 0 || !indexData || indexData.length === 0)
+      return { phaseData: [], phaseAreas: [], markers: [] };
+
+    const etfMap = new Map();
+    data.forEach((d) => { if (d.total_shares) etfMap.set(d.date, d.total_shares); });
+
+    const indexMap = new Map();
+    indexData.forEach((d) => { if (d.close) indexMap.set(d.date, d.close); });
+
+    const allDates = [...etfMap.keys()]
+      .filter((d) => indexMap.has(d))
+      .sort();
+
+    if (allDates.length < ROLLING + 5) return { phaseData: [], phaseAreas: [], markers: [] };
+
+    // 滚动份额变化 (全量数据，不限于 selected range)
+    const sharesArr = allDates.map((d) => etfMap.get(d) / 1e8);
+    const rollChg = [];
+    for (let i = ROLLING; i < sharesArr.length; i++) {
+      rollChg.push((sharesArr[i] / sharesArr[i - ROLLING] - 1) * 100);
+    }
+
+    const hi = Math.max(...rollChg.filter((v) => v > 0).length > 0 ? [0.5] : [0.3],
+      [...rollChg].sort((a, b) => a - b)[Math.floor(rollChg.length * 0.7)]);
+    const lo = Math.min(
+      [...rollChg].sort((a, b) => a - b)[Math.floor(rollChg.length * 0.3)], -0.3);
+
+    // 为每个日期标注阶段 (对齐到 allDates[ROLLING:] )
+    const phaseMap = new Map();
+    for (let i = 0; i < rollChg.length; i++) {
+      if (rollChg[i] > hi) phaseMap.set(allDates[i + ROLLING], "机构增持");
+      else if (rollChg[i] < lo) phaseMap.set(allDates[i + ROLLING], "获利赎回");
+      else phaseMap.set(allDates[i + ROLLING], "中性");
+    }
+
+    // 构建 phaseData (仅 selected range 内的数据)
+    const sliced = allDates.slice(-days);
+    const pData = sliced.map((date) => {
+      const baseETF = etfMap.get(sliced[0]) / 1e8;
+      const baseIdx = indexMap.get(sliced[0]);
+      return {
+        date,
+        "ETF累计%": +((etfMap.get(date) / 1e8 / baseETF - 1) * 100).toFixed(2),
+        "指数累计%": +((indexMap.get(date) / baseIdx - 1) * 100).toFixed(2),
+        "阶段": phaseMap.get(date) || "—",
+      };
+    });
+
+    // 构建 ReferenceArea (连续相同阶段的区域)
+    const areas = [];
+    let runStart = 0;
+    let runPhase = pData[0]?.["阶段"];
+    for (let i = 1; i < pData.length; i++) {
+      if (pData[i]["阶段"] !== runPhase) {
+        if (runPhase && runPhase !== "中性" && i - runStart >= 3) {
+          areas.push({
+            x1: pData[runStart].date,
+            x2: pData[i - 1].date,
+            phase: runPhase,
+          });
+        }
+        runStart = i;
+        runPhase = pData[i]["阶段"];
+      }
+    }
+    if (runPhase && runPhase !== "中性" && pData.length - runStart >= 3) {
+      areas.push({
+        x1: pData[runStart].date,
+        x2: pData[pData.length - 1].date,
+        phase: runPhase,
+      });
+    }
+
+    // 检测连续 5+ 天极端信号 (全量数据)
+    const mkrs = [];
+    let streak = 0;
+    let streakPhase = null;
+    let streakStart = -1;
+    for (let i = 0; i < rollChg.length; i++) {
+      const ph = rollChg[i] > hi ? "up" : rollChg[i] < lo ? "dn" : null;
+      if (ph === streakPhase && ph) {
+        streak++;
+        if (streak === 5 && allDates[i + ROLLING] >= sliced[0]) {
+          mkrs.push({
+            date: allDates[i + ROLLING],
+            y: 0,
+            type: streakPhase === "up" ? "buy" : "sell",
+          });
+        }
+      } else {
+        streak = ph ? 1 : 0;
+        streakPhase = ph;
+        streakStart = i;
+      }
+    }
+
+    return { phaseData: pData, phaseAreas: areas, markers: mkrs };
+  }, [data, indexData, days]);
+
   if (!data || data.length === 0) {
     return <div className="chart__empty">选择一只 ETF 查看趋势</div>;
   }
@@ -131,7 +262,7 @@ export default function TrendChart({ data, etfName, indexData }) {
       {/* 图1: 成交量 + 总份额 */}
       <div className="chart-container">
         <h3 className="chart__title">{etfName} — 成交量与份额</h3>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={280}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" fontSize={11} />
@@ -145,7 +276,7 @@ export default function TrendChart({ data, etfName, indexData }) {
         </ResponsiveContainer>
       </div>
 
-      {/* 图2: 日变化 + 当日绝对值 */}
+      {/* 图2: 日变化 */}
       <div className="chart-container">
         <h3 className="chart__title">
           {etfName} — 份额 vs 上证指数 日变化
@@ -156,7 +287,7 @@ export default function TrendChart({ data, etfName, indexData }) {
           )}
         </h3>
         {compareData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={260}>
             <LineChart data={compareData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" fontSize={11} />
@@ -170,6 +301,58 @@ export default function TrendChart({ data, etfName, indexData }) {
           </ResponsiveContainer>
         ) : (
           <div className="chart__empty">暂无份额数据，请先刷新数据</div>
+        )}
+      </div>
+
+      {/* 图3: 阶段分析 — 累计涨跌幅 + 阶段标注 + 买卖信号 */}
+      <div className="chart-container">
+        <h3 className="chart__title">
+          {etfName} — 阶段分析 (基于{ROLLING}日份额趋势)
+          <span className="phase-legend">
+            <span className="phase-dot phase-buy" /> 机构增持
+            <span className="phase-dot phase-sell" /> 获利赎回
+            <span className="phase-dot phase-marker-buy" /> 买入信号
+            <span className="phase-dot phase-marker-sell" /> 卖出信号
+          </span>
+        </h3>
+        {phaseData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={320}>
+            <LineChart data={phaseData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" fontSize={11} />
+              <YAxis label={{ value: "累计涨跌 (%)", angle: -90, position: "insideLeft", fontSize: 12 }} />
+              <Tooltip content={<PhaseTooltip />} />
+              <Legend />
+              <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="6 3" />
+
+              {/* 阶段背景色 */}
+              {phaseAreas.map((a, i) => (
+                <ReferenceArea
+                  key={i}
+                  x1={a.x1} x2={a.x2}
+                  fill={a.phase === "机构增持" ? "#10b981" : "#ef4444"}
+                  fillOpacity={0.08}
+                />
+              ))}
+
+              {/* 关键信号标记 */}
+              {markers.map((m, i) => (
+                <ReferenceDot
+                  key={i}
+                  x={m.date} y={0}
+                  r={5}
+                  fill={m.type === "buy" ? "#10b981" : "#ef4444"}
+                  stroke="#fff"
+                  strokeWidth={2}
+                />
+              ))}
+
+              <Line type="monotone" dataKey="ETF累计%" stroke="#f59e0b" dot={false} strokeWidth={2} name="ETF累计%" />
+              <Line type="monotone" dataKey="指数累计%" stroke="#8b5cf6" dot={false} strokeWidth={2} name="指数累计%" />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="chart__empty">数据不足，需要至少 {ROLLING + 5} 个交易日</div>
         )}
       </div>
     </div>
