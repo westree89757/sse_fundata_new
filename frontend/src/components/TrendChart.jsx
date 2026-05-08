@@ -335,52 +335,7 @@ export default function TrendChart({ data, etfName, indexData }) {
         </div>
       </div>
 
-      {/* 图1: 成交量 + 总份额 */}
-      <div className="chart-container">
-        <h3 className="chart__title">{etfName} — 成交量与份额</h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" fontSize={11} />
-            <YAxis yAxisId="left" label={{ value: "成交量(万手)", angle: -90, position: "insideLeft", fontSize: 11 }} />
-            <YAxis yAxisId="right" orientation="right" label={{ value: "总份额(亿份)", angle: 90, position: "insideRight", fontSize: 11 }} />
-            <Tooltip />
-            <Legend />
-            <Line yAxisId="left" type="monotone" dataKey="成交量" stroke="#3b82f6" dot={false} />
-            <Line yAxisId="right" type="monotone" dataKey="总份额" stroke="#10b981" dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* 图2: 日变化 */}
-      <div className="chart-container">
-        <h3 className="chart__title">
-          {etfName} — 份额 vs 上证指数 日变化
-          {correlation !== null && (
-            <span className="chart__corr" style={{ color: correlation < 0 ? "#ef4444" : "#10b981" }}>
-              {" "}r = {correlation.toFixed(3)}
-            </span>
-          )}
-        </h3>
-        {compareData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={compareData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" fontSize={11} />
-              <YAxis label={{ value: "日变化 (%)", angle: -90, position: "insideLeft", fontSize: 12 }} />
-              <Tooltip content={<CompareTooltip />} />
-              <Legend />
-              <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="6 3" />
-              <Line type="monotone" dataKey="份额变化%" stroke="#10b981" dot={false} strokeWidth={2} name="份额变化%" />
-              <Line type="monotone" dataKey="指数变化%" stroke="#ef4444" dot={false} strokeWidth={2} name="指数变化%" />
-            </LineChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="chart__empty">暂无份额数据，请先刷新数据</div>
-        )}
-      </div>
-
-      {/* 图3: 阶段分析 — 累计涨跌幅 + 阶段标注 + 买卖信号 */}
+      {/* 图1: 阶段分析 — 累计涨跌幅 + 阶段标注 + 买卖信号 */}
       <div className="chart-container">
         <h3 className="chart__title">
           {etfName} — 阶段分析 (基于{ROLLING}日≈2周趋势){" "}
@@ -485,6 +440,51 @@ export default function TrendChart({ data, etfName, indexData }) {
             </div>
           );
         })()}
+      </div>
+
+      {/* 图2: 成交量 + 总份额 */}
+      <div className="chart-container">
+        <h3 className="chart__title">{etfName} — 成交量与份额</h3>
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" fontSize={11} />
+            <YAxis yAxisId="left" label={{ value: "成交量(万手)", angle: -90, position: "insideLeft", fontSize: 11 }} />
+            <YAxis yAxisId="right" orientation="right" label={{ value: "总份额(亿份)", angle: 90, position: "insideRight", fontSize: 11 }} />
+            <Tooltip />
+            <Legend />
+            <Line yAxisId="left" type="monotone" dataKey="成交量" stroke="#3b82f6" dot={false} />
+            <Line yAxisId="right" type="monotone" dataKey="总份额" stroke="#10b981" dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* 图3: 日变化 */}
+      <div className="chart-container">
+        <h3 className="chart__title">
+          {etfName} — 份额 vs 上证指数 日变化
+          {correlation !== null && (
+            <span className="chart__corr" style={{ color: correlation < 0 ? "#ef4444" : "#10b981" }}>
+              {" "}r = {correlation.toFixed(3)}
+            </span>
+          )}
+        </h3>
+        {compareData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={compareData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" fontSize={11} />
+              <YAxis label={{ value: "日变化 (%)", angle: -90, position: "insideLeft", fontSize: 12 }} />
+              <Tooltip content={<CompareTooltip />} />
+              <Legend />
+              <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="6 3" />
+              <Line type="monotone" dataKey="份额变化%" stroke="#10b981" dot={false} strokeWidth={2} name="份额变化%" />
+              <Line type="monotone" dataKey="指数变化%" stroke="#ef4444" dot={false} strokeWidth={2} name="指数变化%" />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="chart__empty">暂无份额数据，请先刷新数据</div>
+        )}
       </div>
     </div>
   );
