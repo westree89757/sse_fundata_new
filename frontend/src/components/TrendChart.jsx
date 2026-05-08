@@ -55,14 +55,14 @@ function PhaseTooltip({ active, payload, label }) {
     <div className="custom-tooltip">
       <div className="tooltip-date">{label}</div>
       <div className="tooltip-row">
-        <span className="tooltip-label">ETF累计</span>
-        <span className="tooltip-val" style={{ color: data["ETF累计%"] >= 0 ? "#ef4444" : "#10b981" }}>
+        <span className="tooltip-label" style={{ color: "#10b981" }}>ETF累计</span>
+        <span className="tooltip-val" style={{ color: "#10b981" }}>
           {data["ETF累计%"] > 0 ? "+" : ""}{data["ETF累计%"]}%
         </span>
       </div>
       <div className="tooltip-row">
-        <span className="tooltip-label">上证累计</span>
-        <span className="tooltip-val" style={{ color: data["指数累计%"] >= 0 ? "#ef4444" : "#10b981" }}>
+        <span className="tooltip-label" style={{ color: "#ef4444" }}>上证累计</span>
+        <span className="tooltip-val" style={{ color: "#ef4444" }}>
           {data["指数累计%"] > 0 ? "+" : ""}{data["指数累计%"]}%
         </span>
       </div>
@@ -358,8 +358,8 @@ export default function TrendChart({ data, etfName, indexData }) {
                 />
               ))}
 
-              <Line type="monotone" dataKey="ETF累计%" stroke="#f59e0b" dot={false} strokeWidth={2} name="ETF累计%" />
-              <Line type="monotone" dataKey="指数累计%" stroke="#8b5cf6" dot={false} strokeWidth={2} name="指数累计%" />
+              <Line type="monotone" dataKey="ETF累计%" stroke="#10b981" dot={false} strokeWidth={2} name="ETF累计%" />
+              <Line type="monotone" dataKey="指数累计%" stroke="#ef4444" dot={false} strokeWidth={2} name="指数累计%" />
             </LineChart>
           </ResponsiveContainer>
         ) : (
