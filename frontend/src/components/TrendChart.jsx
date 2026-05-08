@@ -13,8 +13,9 @@ import {
   ReferenceDot,
 } from "recharts";
 
-const RANGE_OPTIONS = { 30: "近30天", 90: "近90天", 180: "近180天" };
-const ROLLING = 15; // 15日滚动窗口判断阶段
+// 周维度: 4周≈20交易日, 13周≈65, 26周≈130
+const RANGE_OPTIONS = { 20: "近4周", 65: "近13周", 130: "近26周" };
+const ROLLING = 10; // 2周滚动窗口判断阶段
 
 function CompareTooltip({ active, payload, label }) {
   if (!active || !payload || payload.length === 0) return null;
@@ -75,7 +76,7 @@ function PhaseTooltip({ active, payload, label }) {
 }
 
 export default function TrendChart({ data, etfName, indexData }) {
-  const [days, setDays] = useState(90);
+  const [days, setDays] = useState(65);  // 默认近13周
 
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
@@ -307,12 +308,22 @@ export default function TrendChart({ data, etfName, indexData }) {
       {/* 图3: 阶段分析 — 累计涨跌幅 + 阶段标注 + 买卖信号 */}
       <div className="chart-container">
         <h3 className="chart__title">
-          {etfName} — 阶段分析 (基于{ROLLING}日份额趋势)
+          {etfName} — 阶段分析 (基于{ROLLING}日≈2周趋势){" "}
+          {phaseData.length > 0 && (
+            <span className="current-phase" style={{
+              background: phaseData[phaseData.length-1]["阶段"] === "机构增持" ? "#d1fae5" :
+                          phaseData[phaseData.length-1]["阶段"] === "获利赎回" ? "#fee2e2" : "#f1f5f9",
+              color: phaseData[phaseData.length-1]["阶段"] === "机构增持" ? "#065f46" :
+                     phaseData[phaseData.length-1]["阶段"] === "获利赎回" ? "#991b1b" : "#475569",
+            }}>
+              当前: {phaseData[phaseData.length-1]["阶段"]}
+            </span>
+          )}
           <span className="phase-legend">
             <span className="phase-dot phase-buy" /> 机构增持
             <span className="phase-dot phase-sell" /> 获利赎回
-            <span className="phase-dot phase-marker-buy" /> 买入信号
-            <span className="phase-dot phase-marker-sell" /> 卖出信号
+            <span className="phase-dot phase-marker-buy" /> 买入
+            <span className="phase-dot phase-marker-sell" /> 卖出
           </span>
         </h3>
         {phaseData.length > 0 ? (

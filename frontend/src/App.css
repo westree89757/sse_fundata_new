@@ -209,6 +209,14 @@ body {
 .phase-dot.phase-marker-buy { background: #10b981; border: 1.5px solid #fff; }
 .phase-dot.phase-marker-sell { background: #ef4444; border: 1.5px solid #fff; }
 
+.current-phase {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .chart__range-row {
   display: flex;
   justify-content: flex-end;
