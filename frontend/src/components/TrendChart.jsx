@@ -13,6 +13,37 @@ import {
 
 const RANGE_OPTIONS = { 30: "近30天", 90: "近90天", 180: "近180天" };
 
+function CompareTooltip({ active, payload, label }) {
+  if (!active || !payload || payload.length === 0) return null;
+  const data = payload[0].payload;
+  return (
+    <div className="custom-tooltip">
+      <div className="tooltip-date">{label}</div>
+      <div className="tooltip-row">
+        <span className="tooltip-label">总份额</span>
+        <span className="tooltip-val">{data["份额(亿份)"]?.toFixed(2)} 亿份</span>
+      </div>
+      <div className="tooltip-row">
+        <span className="tooltip-label">份额变化</span>
+        <span className="tooltip-val" style={{ color: data["份额变化%"] >= 0 ? "#10b981" : "#ef4444" }}>
+          {data["份额变化%"] > 0 ? "+" : ""}{data["份额变化%"]}%
+        </span>
+      </div>
+      <div className="tooltip-divider" />
+      <div className="tooltip-row">
+        <span className="tooltip-label">上证指数</span>
+        <span className="tooltip-val">{data["上证指数"]?.toFixed(0)} 点</span>
+      </div>
+      <div className="tooltip-row">
+        <span className="tooltip-label">指数变化</span>
+        <span className="tooltip-val" style={{ color: data["指数变化%"] >= 0 ? "#ef4444" : "#10b981" }}>
+          {data["指数变化%"] > 0 ? "+" : ""}{data["指数变化%"]}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function TrendChart({ data, etfName, indexData }) {
   const [days, setDays] = useState(30);
 
@@ -44,13 +75,19 @@ export default function TrendChart({ data, etfName, indexData }) {
     const sliced = commonDates.slice(-days);
 
     return sliced.map((date, i) => {
-      if (i === 0) return { date, "份额变化%": 0, "指数变化%": 0 };
+      const sharesYi = etfMap.get(date) / 1e8;
+      const idxPt = indexMap.get(date);
+      if (i === 0) {
+        return { date, "份额变化%": 0, "指数变化%": 0, "份额(亿份)": +sharesYi.toFixed(2), "上证指数": idxPt };
+      }
       const prevETF = etfMap.get(sliced[i - 1]);
       const prevIdx = indexMap.get(sliced[i - 1]);
       return {
         date,
         "份额变化%": +((etfMap.get(date) / prevETF - 1) * 100).toFixed(3),
         "指数变化%": +((indexMap.get(date) / prevIdx - 1) * 100).toFixed(3),
+        "份额(亿份)": +sharesYi.toFixed(2),
+        "上证指数": idxPt,
       };
     });
   }, [data, indexData, days]);
@@ -108,7 +145,7 @@ export default function TrendChart({ data, etfName, indexData }) {
         </ResponsiveContainer>
       </div>
 
-      {/* 图2: 归一化涨跌幅对比 — 直观展示负相关 */}
+      {/* 图2: 日变化 + 当日绝对值 */}
       <div className="chart-container">
         <h3 className="chart__title">
           {etfName} — 份额 vs 上证指数 日变化
@@ -124,7 +161,7 @@ export default function TrendChart({ data, etfName, indexData }) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" fontSize={11} />
               <YAxis label={{ value: "日变化 (%)", angle: -90, position: "insideLeft", fontSize: 12 }} />
-              <Tooltip formatter={(v) => `${v}%`} />
+              <Tooltip content={<CompareTooltip />} />
               <Legend />
               <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="6 3" />
               <Line type="monotone" dataKey="份额变化%" stroke="#10b981" dot={false} strokeWidth={2} name="份额变化%" />

@@ -142,6 +142,48 @@ body {
   font-weight: 500;
 }
 
+/* Custom tooltip for comparison chart */
+.custom-tooltip {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.tooltip-date {
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 2px 0;
+}
+
+.tooltip-label {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.tooltip-val {
+  font-weight: 600;
+  font-size: 12px;
+  color: #1a1a2e;
+}
+
+.tooltip-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 0;
+}
+
 .chart__range-row {
   display: flex;
   justify-content: flex-end;
