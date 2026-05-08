@@ -42,14 +42,17 @@ export default function TrendChart({ data, etfName, indexData }) {
     if (commonDates.length === 0) return [];
 
     const sliced = commonDates.slice(-days);
-    const baseETF = etfMap.get(sliced[0]);
-    const baseIdx = indexMap.get(sliced[0]);
 
-    return sliced.map((date) => ({
-      date,
-      "份额变化%": +((etfMap.get(date) / baseETF - 1) * 100).toFixed(2),
-      "指数变化%": +((indexMap.get(date) / baseIdx - 1) * 100).toFixed(2),
-    }));
+    return sliced.map((date, i) => {
+      if (i === 0) return { date, "份额变化%": 0, "指数变化%": 0 };
+      const prevETF = etfMap.get(sliced[i - 1]);
+      const prevIdx = indexMap.get(sliced[i - 1]);
+      return {
+        date,
+        "份额变化%": +((etfMap.get(date) / prevETF - 1) * 100).toFixed(3),
+        "指数变化%": +((indexMap.get(date) / prevIdx - 1) * 100).toFixed(3),
+      };
+    });
   }, [data, indexData, days]);
 
   const correlation = useMemo(() => {
@@ -108,7 +111,7 @@ export default function TrendChart({ data, etfName, indexData }) {
       {/* 图2: 归一化涨跌幅对比 — 直观展示负相关 */}
       <div className="chart-container">
         <h3 className="chart__title">
-          {etfName} — 份额 vs 上证指数 涨跌幅对比
+          {etfName} — 份额 vs 上证指数 日变化
           {correlation !== null && (
             <span className="chart__corr" style={{ color: correlation < 0 ? "#ef4444" : "#10b981" }}>
               {" "}r = {correlation.toFixed(3)}
@@ -120,7 +123,7 @@ export default function TrendChart({ data, etfName, indexData }) {
             <LineChart data={compareData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" fontSize={11} />
-              <YAxis label={{ value: "累计涨跌幅 (%)", angle: -90, position: "insideLeft", fontSize: 12 }} />
+              <YAxis label={{ value: "日变化 (%)", angle: -90, position: "insideLeft", fontSize: 12 }} />
               <Tooltip formatter={(v) => `${v}%`} />
               <Legend />
               <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="6 3" />
