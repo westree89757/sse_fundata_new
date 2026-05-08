@@ -262,7 +262,6 @@ export default function TrendChart({ data, etfName, indexData }) {
     const mkrs = [];
     let streak = 0;
     let streakPhase = null;
-    let streakStart = -1;
     for (let i = 0; i < rollChg.length; i++) {
       const ph = rollChg[i] > hi ? "up" : rollChg[i] < lo ? "dn" : null;
       if (ph === streakPhase && ph) {
@@ -277,11 +276,42 @@ export default function TrendChart({ data, etfName, indexData }) {
       } else {
         streak = ph ? 1 : 0;
         streakPhase = ph;
-        streakStart = i;
       }
     }
 
-    return { phaseData: pData, phaseAreas: areas, markers: mkrs };
+    // 激进卖出点: 赎回阶段内指数创新高日 (分位更低=更激进)
+    const aggressiveLo = [...rollChg].sort((a, b) => a - b)[Math.floor(rollChg.length * 0.15)];
+    const aggressivePhase = rollChg.map((v) => v < aggressiveLo);
+    const aggressiveSells = [];
+    let ap = 0;
+    while (ap < aggressivePhase.length) {
+      if (aggressivePhase[ap]) {
+        let ae = ap;
+        while (ae < aggressivePhase.length && aggressivePhase[ae]) ae++;
+        if (ae - ap >= 3) {
+          // 找赎回区间内指数峰值日
+          const segIdx = allDates.slice(ap + ROLLING, ae + ROLLING + 1)
+            .map((d) => indexMap.get(d))
+            .filter((v) => v != null);
+          if (segIdx.length > 0) {
+            const peakVal = Math.max(...segIdx);
+            const peakDate = allDates.slice(ap + ROLLING, ae + ROLLING + 1)
+              .find((d) => indexMap.get(d) === peakVal);
+            if (peakDate && peakDate >= sliced[0]) {
+              aggressiveSells.push({ date: peakDate, y: 0, type: "aggressive_sell" });
+            }
+          }
+        }
+        ap = ae;
+      } else {
+        ap++;
+      }
+    }
+
+    // 合并所有标记
+    const allMarkers = [...mkrs, ...aggressiveSells];
+
+    return { phaseData: pData, phaseAreas: areas, markers: allMarkers };
   }, [data, indexData, days]);
 
   if (!data || data.length === 0) {
@@ -365,10 +395,10 @@ export default function TrendChart({ data, etfName, indexData }) {
             </span>
           )}
           <span className="phase-legend">
-            <span className="phase-dot phase-buy" /> 机构增持
-            <span className="phase-dot phase-sell" /> 获利赎回
+            <span className="phase-dot phase-buy" /> 增持
+            <span className="phase-dot phase-sell" /> 赎回
             <span className="phase-dot phase-marker-buy" /> 买入
-            <span className="phase-dot phase-marker-sell" /> 卖出
+            <span className="phase-dot phase-marker-sell" style={{background:"#f59e0b"}} /> 激进卖
           </span>
         </h3>
         {phaseData.length > 0 ? (
@@ -396,8 +426,8 @@ export default function TrendChart({ data, etfName, indexData }) {
                 <ReferenceDot
                   key={i}
                   x={m.date} y={0}
-                  r={5}
-                  fill={m.type === "buy" ? "#10b981" : "#ef4444"}
+                  r={m.type === "aggressive_sell" ? 6 : 5}
+                  fill={m.type === "buy" ? "#10b981" : m.type === "aggressive_sell" ? "#f59e0b" : "#ef4444"}
                   stroke="#fff"
                   strokeWidth={2}
                 />
@@ -447,9 +477,9 @@ export default function TrendChart({ data, etfName, indexData }) {
                 <div className="guidance-rules">
                   <div className="guidance-rule">🟢 增持 → 分批建仓</div>
                   <div className="guidance-rule">🟡 中性 → 持有等待</div>
-                  <div className="guidance-rule">🔴 赎回 &lt;2周 → 继续持有</div>
-                  <div className="guidance-rule">🔴 赎回 &gt;4周 → 考虑减仓</div>
-                  <div className="guidance-rule">⚡ 连续5天信号 → 高可信度</div>
+                  <div className="guidance-rule">🔴 保守: 赎回&lt;2周持有</div>
+                  <div className="guidance-rule">🟠 激进: 赎回区内指数新高卖</div>
+                  <div className="guidance-rule">⚡ 连续5天信号 → 高可信</div>
                 </div>
               </div>
             </div>
