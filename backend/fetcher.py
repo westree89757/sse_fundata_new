@@ -4,6 +4,16 @@ from datetime import datetime, timedelta
 CSI300_KEYWORDS = ["沪深300", "沪深 300", "CSI300", "CSI 300"]
 
 
+def _safe_float(val) -> float | None:
+    """安全转换为 float，处理 '---' 等非数字值"""
+    if val is None:
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
 async def fetch_and_store_etf_data():
     """拉取沪深300ETF列表(按总份额排序取前7)及其日线数据，存入数据库"""
     from backend.database import upsert_etf_basic, upsert_etf_daily, init_db
@@ -43,7 +53,7 @@ async def fetch_and_store_etf_data():
             "code": code,
             "name": str(row["基金简称"]),
             "total_shares": None,
-            "nav": float(row[nav_col]) if nav_col in df_csi300.columns and row[nav_col] else None,
+            "nav": _safe_float(row.get(nav_col)) if nav_col in df_csi300.columns else None,
         })
 
     # 2. 拉取每只ETF近一年日线数据 (含成交量)
