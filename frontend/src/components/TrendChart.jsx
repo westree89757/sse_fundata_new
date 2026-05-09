@@ -71,6 +71,12 @@ function PhaseTooltip({ active, payload, label }) {
           {data["指数累计%"] > 0 ? "+" : ""}{data["指数累计%"]}%
         </span>
       </div>
+      <div className="tooltip-row">
+        <span className="tooltip-label" style={{ color: "#94a3b8" }}>跟踪误差</span>
+        <span className="tooltip-val" style={{ color: data["跟踪误差%"] > 0 ? "#ef4444" : "#10b981" }}>
+          {data["跟踪误差%"] > 0 ? "+" : ""}{data["跟踪误差%"]}%
+        </span>
+      </div>
       {data["增持起点"] && (
         <>
           <div className="tooltip-divider" />
@@ -239,6 +245,7 @@ export default function TrendChart({ data, etfName, indexData, szIndexData }) {
         date,
         "ETF累计%": +((curETF / baseETF - 1) * 100).toFixed(2),
         "指数累计%": +((curIdx / baseIdx - 1) * 100).toFixed(2),
+        "跟踪误差%": +(((curETF / baseETF) - (curIdx / baseIdx)) * 100).toFixed(2),
         "增持起点收益ETF%": lastZC && zcETF ? +((curETF / zcETF - 1) * 100).toFixed(2) : null,
         "增持起点收益指数%": lastZC && zcIdx ? +((curIdx / zcIdx - 1) * 100).toFixed(2) : null,
         "增持起点": lastZC,
@@ -403,6 +410,7 @@ export default function TrendChart({ data, etfName, indexData, szIndexData }) {
 
               <Line type="monotone" dataKey="ETF累计%" stroke="#10b981" dot={false} strokeWidth={2} name="ETF涨跌%" />
               <Line type="monotone" dataKey="指数累计%" stroke="#ef4444" dot={false} strokeWidth={2} name="沪深300累计%" />
+              <Line type="monotone" dataKey="跟踪误差%" stroke="#94a3b8" dot={false} strokeWidth={1.5} strokeDasharray="5 5" name="跟踪误差" />
             </LineChart>
           </ResponsiveContainer>
         ) : (
