@@ -11,19 +11,6 @@ from backend.fetcher import fetch_and_store_etf_data, fetch_and_store_index_data
 async def lifespan(app: FastAPI):
     await init_db()
     setup_scheduler()
-    # 启动时尝试拉取一次数据(如果DB为空)
-    try:
-        etfs = await get_all_etfs()
-        if not etfs:
-            await fetch_and_store_etf_data()
-        idx = await get_index_history()
-        if not idx:
-            await fetch_and_store_index_data()
-        hs300 = await get_hs300_history()
-        if not hs300:
-            await fetch_and_store_hs300_data()
-    except Exception:
-        pass
     yield
 
 
