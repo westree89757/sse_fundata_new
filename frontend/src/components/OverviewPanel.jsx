@@ -33,18 +33,23 @@ export default function OverviewPanel({ etfs, selectedCode, onSelect, onDataChan
           }
 
           const last = recent20[recent20.length - 1];
-          const turnover = last.turnover || 0;
+          const amountYi = last.turnover ? (last.turnover / 1e8) : 0;
 
           let phase = "中性";
           if (shareChg > 0.3) phase = "增持";
           else if (shareChg < -1.0) phase = "赎回";
 
-          results[etf.code] = { shareChg, netFlow5d, turnover, phase, name: etf.name };
-          setEtfData((prev) => ({ ...prev, [etf.code]: { shareChg, netFlow5d, turnover, phase } }));
+          results[etf.code] = { shareChg, netFlow5d, turnover: last.turnover, phase, name: etf.name };
+          setEtfData((prev) => ({ ...prev, [etf.code]: { shareChg, netFlow5d, turnover: last.turnover, phase } }));
           pending--;
           tryReport();
         })
-        .catch(() => { pending--; tryReport(); });
+        .catch((err) => {
+          results[etf.code] = { shareChg: 0, netFlow5d: 0, turnover: null, phase: "无数据", name: etf.name };
+          setEtfData((prev) => ({ ...prev, [etf.code]: { shareChg: 0, netFlow5d: 0, turnover: null, phase: "无数据" } }));
+          pending--;
+          tryReport();
+        });
     });
   }, [etfs]);
 
@@ -107,9 +112,9 @@ export default function OverviewPanel({ etfs, selectedCode, onSelect, onDataChan
                       </span>
                     </div>
                     <div className="ov-stat">
-                      <span className="ov-label">换手</span>
-                      <span className="ov-val" style={{ color: d.turnover > 3 ? "#ef4444" : "#64748b" }}>
-                        {d.turnover.toFixed(1)}%
+                      <span className="ov-label">成交额</span>
+                      <span className="ov-val" style={{ color: (d.turnover / 1e8) > 50 ? "#ef4444" : "#64748b" }}>
+                        {(d.turnover / 1e8).toFixed(1)}亿
                       </span>
                     </div>
                     <div className="ov-phase-badge" style={{
