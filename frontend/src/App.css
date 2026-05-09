@@ -265,6 +265,66 @@ body {
   white-space: nowrap;
 }
 
+/* Overview panel */
+.overview-panel {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.overview-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 12px;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.overview-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.overview-card:hover { border-color: #3b82f6; }
+.overview-card.ov-buy { border-left: 3px solid #10b981; }
+.overview-card.ov-sell { border-left: 3px solid #ef4444; }
+
+.ov-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ov-code {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.ov-stats { display: flex; flex-direction: column; gap: 2px; }
+.ov-stat { display: flex; justify-content: space-between; align-items: center; }
+
+.ov-label { font-size: 10px; color: #94a3b8; }
+.ov-val { font-size: 10px; font-weight: 600; }
+
+.ov-phase-badge {
+  font-size: 10px; font-weight: 600; text-align: center;
+  padding: 2px 0; border-radius: 3px; margin-top: 6px;
+}
+
+.ov-loading { font-size: 10px; color: #94a3b8; text-align: center; padding: 8px 0; }
+
 .chart__range-row {
   display: flex;
   justify-content: flex-end;
@@ -328,6 +388,45 @@ body {
   color: #dc2626;
   cursor: pointer;
 }
+
+/* Alert banner */
+.alert-banner {
+  padding: 12px 18px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.alert-buy {
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}
+
+.alert-sell {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.alert-icon { font-size: 18px; }
+.alert-text { flex: 1; }
+
+.alert-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  padding: 0 4px;
+}
+
+.alert-close:hover { opacity: 1; }
 
 /* Responsive: stack cards on narrow screens */
 @media (max-width: 900px) {

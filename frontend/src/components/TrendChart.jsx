@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   LineChart,
   Line,
@@ -95,7 +95,7 @@ function PhaseTooltip({ active, payload, label }) {
   );
 }
 
-export default function TrendChart({ data, etfName, indexData, szIndexData }) {
+export default function TrendChart({ data, etfName, indexData, szIndexData, onAlert }) {
   const [days, setDays] = useState(65);  // 默认近13周
 
   const chartData = useMemo(() => {
@@ -323,6 +323,18 @@ export default function TrendChart({ data, etfName, indexData, szIndexData }) {
 
     return { phaseData: pData, phaseAreas: areas, markers: allMarkers };
   }, [data, indexData, days]);
+
+  // 预警通知: 检测到连续极端信号时触发
+  useEffect(() => {
+    if (!onAlert || !markers || markers.length === 0) return;
+    const last = markers[markers.length - 1];
+    const phase = phaseData.length > 0 ? phaseData[phaseData.length - 1]["阶段"] : "";
+    if (last.type === "buy") {
+      onAlert({ type: "buy", text: `${etfName}: 检测到连续增持信号 — 历史上后续正收益概率 60-100%，当前处于${phase}阶段` });
+    } else if (last.type === "aggressive_sell") {
+      onAlert({ type: "sell", text: `${etfName}: 赎回阶段指数创新高 — 激进卖出信号触发，当前处于${phase}阶段` });
+    }
+  }, [markers, phaseData, etfName, onAlert]);
 
   if (!data || data.length === 0) {
     return <div className="chart__empty">选择一只 ETF 查看趋势</div>;

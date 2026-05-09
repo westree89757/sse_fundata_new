@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ETFGrid from "./components/ETFGrid";
 import TrendChart from "./components/TrendChart";
+import OverviewPanel from "./components/OverviewPanel";
 import { fetchETFList, fetchETFHistory, fetchIndexHistory, fetchHS300History, triggerRefresh } from "./api";
 
 export default function App() {
@@ -11,6 +12,7 @@ export default function App() {
   const [hs300Data, setHs300Data] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [alert, setAlert] = useState(null);
 
   const loadETFList = async () => {
     try {
@@ -81,9 +83,17 @@ export default function App() {
           {loading ? "刷新中..." : "刷新数据"}
         </button>
       </header>
+      {alert && (
+        <div className={`alert-banner alert-${alert.type}`}>
+          <span className="alert-icon">{alert.type === "buy" ? "🟢" : "🔴"}</span>
+          <span className="alert-text">{alert.text}</span>
+          <button className="alert-close" onClick={() => setAlert(null)}>×</button>
+        </div>
+      )}
       <main className="app__main">
+        <OverviewPanel etfs={etfs} onSelect={setSelectedCode} />
         <ETFGrid etfs={etfs} selectedCode={selectedCode} onSelect={setSelectedCode} />
-        <TrendChart data={history} etfName={selectedETF?.name || ""} indexData={hs300Data} szIndexData={indexData} />
+        <TrendChart data={history} etfName={selectedETF?.name || ""} indexData={hs300Data} szIndexData={indexData} onAlert={setAlert} />
       </main>
     </div>
   );
