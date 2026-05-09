@@ -125,6 +125,22 @@ export default function OverviewPanel({ etfs, selectedCode, onSelect, onDataChan
           );
         })}
       </div>
+      {/* 大小票轮动比 */}
+      {etfs.length >= 7 && (() => {
+        const BIG_CODES = ["510300", "510310", "510330"];
+        const bigFlow = BIG_CODES.reduce((s, c) => s + ((etfData[c] && etfData[c].netFlow5d) || 0), 0);
+        const smallFlow = etfs.filter((e) => !BIG_CODES.includes(e.code))
+          .reduce((s, e) => s + ((etfData[e.code] && etfData[e.code].netFlow5d) || 0), 0);
+        const bigCount = BIG_CODES.filter((c) => etfData[c] && etfData[c].phase === "增持").length;
+        const smallCount = etfs.filter((e) => !BIG_CODES.includes(e.code) && etfData[e.code] && etfData[e.code].phase === "增持").length;
+        const bias = bigFlow > 0 && smallFlow < 0 ? "机构主导" : bigFlow < 0 && smallFlow > 0 ? "散户主导" : "均衡";
+        return (
+          <div className="rotation-bar">
+            <span className="rotation-label">轮动: 三大ETF净流入 {bigFlow > 0 ? "+" : ""}{bigFlow.toFixed(2)}亿 | 四小 {smallFlow > 0 ? "+" : ""}{smallFlow.toFixed(2)}亿</span>
+            <span className={`rotation-badge ${bias === "机构主导" ? "rot-big" : bias === "散户主导" ? "rot-small" : "rot-neutral"}`}>{bias}</span>
+          </div>
+        );
+      })()}
     </div>
   );
 }
