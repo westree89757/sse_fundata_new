@@ -1,13 +1,19 @@
-import akshare as ak
 import os
-from datetime import datetime, timedelta
-
-# 禁用系统代理（国内金融数据 API 不需要代理）
-os.environ.pop("http_proxy", None)
-os.environ.pop("https_proxy", None)
-os.environ.pop("HTTP_PROXY", None)
-os.environ.pop("HTTPS_PROXY", None)
 os.environ["no_proxy"] = "*"
+
+import akshare as ak
+from datetime import datetime, timedelta
+import requests
+import urllib3
+urllib3.disable_warnings()
+
+# Monkey-patch: 强制所有 requests 调用绕过系统代理
+_orig_request = requests.Session.request
+def _no_proxy_request(self, method, url, **kwargs):
+    kwargs.setdefault("proxies", {"http": None, "https": None})
+    kwargs.setdefault("verify", False)
+    return _orig_request(self, method, url, **kwargs)
+requests.Session.request = _no_proxy_request
 
 CSI300_KEYWORDS = ["沪深300", "沪深 300", "CSI300", "CSI 300"]
 
