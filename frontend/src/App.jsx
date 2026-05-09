@@ -13,6 +13,27 @@ export default function App() {
   const [error, setError] = useState(null);
   const [alert, setAlert] = useState(null);
 
+  const handleDataChange = (allData) => {
+    if (!allData || allData.length === 0) return;
+    const buyCount = allData.filter((d) => d.phase === "增持").length;
+    const sellCount = allData.filter((d) => d.phase === "赎回").length;
+    const totalFlow = allData.reduce((s, d) => s + d.netFlow5d, 0);
+    const buyNames = allData.filter((d) => d.phase === "增持").map((d) => d.name).join("、");
+    const sellNames = allData.filter((d) => d.phase === "赎回").map((d) => d.name).join("、");
+
+    if (buyCount >= 4) {
+      setAlert({ type: "buy", text: `强增持信号: ${buyCount}/7 ETF处于增持阶段 (${buyNames})，合计净流入 ${totalFlow.toFixed(2)}亿 — 机构大规模抄底中` });
+    } else if (sellCount >= 4) {
+      setAlert({ type: "sell", text: `强赎回信号: ${sellCount}/7 ETF处于获利赎回阶段 (${sellNames})，合计净流入 ${totalFlow.toFixed(2)}亿 — 普遍获利了结，注意趋势` });
+    } else if (buyCount >= 2) {
+      setAlert({ type: "buy", text: `增持信号: ${buyCount}/7 ETF处于增持阶段 (${buyNames})，合计净流入 ${totalFlow.toFixed(2)}亿` });
+    } else if (sellCount >= 2) {
+      setAlert({ type: "sell", text: `赎回信号: ${sellCount}/7 ETF处于获利赎回阶段 (${sellNames})，合计净流入 ${totalFlow.toFixed(2)}亿` });
+    } else {
+      setAlert(null);
+    }
+  };
+
   const loadETFList = async () => {
     try {
       setLoading(true);
@@ -90,8 +111,8 @@ export default function App() {
         </div>
       )}
       <main className="app__main">
-        <OverviewPanel etfs={etfs} selectedCode={selectedCode} onSelect={setSelectedCode} />
-        <TrendChart data={history} etfName={selectedETF?.name || ""} indexData={hs300Data} szIndexData={indexData} onAlert={setAlert} />
+        <OverviewPanel etfs={etfs} selectedCode={selectedCode} onSelect={setSelectedCode} onDataChange={handleDataChange} />
+        <TrendChart data={history} etfName={selectedETF?.name || ""} indexData={hs300Data} szIndexData={indexData} />
       </main>
     </div>
   );

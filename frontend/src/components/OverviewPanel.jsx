@@ -1,15 +1,24 @@
 import { useEffect, useState } from "react";
 import { fetchETFHistory } from "../api";
 
-export default function OverviewPanel({ etfs, selectedCode, onSelect }) {
+export default function OverviewPanel({ etfs, selectedCode, onSelect, onDataChange }) {
   const [etfData, setEtfData] = useState({});
 
   useEffect(() => {
     if (!etfs || etfs.length === 0) return;
+    const results = {};
+    let pending = etfs.length;
+
+    const tryReport = () => {
+      if (pending <= 0 && onDataChange) {
+        onDataChange(Object.entries(results).map(([code, d]) => ({ code, ...d })));
+      }
+    };
+
     etfs.forEach((etf) => {
       fetchETFHistory(etf.code)
         .then((hist) => {
-          if (!hist || hist.length < 20) return;
+          if (!hist || hist.length < 20) { pending--; tryReport(); return; }
           const recent20 = hist.slice(-20);
           const shareStart = recent20[0].total_shares;
           const shareEnd = recent20[recent20.length - 1].total_shares;
@@ -30,12 +39,12 @@ export default function OverviewPanel({ etfs, selectedCode, onSelect }) {
           if (shareChg > 0.3) phase = "增持";
           else if (shareChg < -1.0) phase = "赎回";
 
-          setEtfData((prev) => ({
-            ...prev,
-            [etf.code]: { shareChg, netFlow5d, turnover, phase },
-          }));
+          results[etf.code] = { shareChg, netFlow5d, turnover, phase, name: etf.name };
+          setEtfData((prev) => ({ ...prev, [etf.code]: { shareChg, netFlow5d, turnover, phase } }));
+          pending--;
+          tryReport();
         })
-        .catch(() => {});
+        .catch(() => { pending--; tryReport(); });
     });
   }, [etfs]);
 
