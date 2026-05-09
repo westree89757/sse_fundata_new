@@ -31,9 +31,15 @@ async def init_db():
                 close REAL,
                 volume REAL,
                 total_shares REAL,
+                turnover REAL,
                 UNIQUE(code, date)
             )
         """)
+        # 兼容已有数据库: 如果 turnover 列不存在则添加
+        try:
+            await db.execute("ALTER TABLE etf_daily ADD COLUMN turnover REAL")
+        except Exception:
+            pass  # 列已存在
         await db.execute("""
             CREATE TABLE IF NOT EXISTS index_daily (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,10 +68,10 @@ async def upsert_etf_daily(records: list[dict]):
     async with get_db() as db:
         for r in records:
             await db.execute("""
-                INSERT OR REPLACE INTO etf_daily (code, date, open, high, low, close, volume, total_shares)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT OR REPLACE INTO etf_daily (code, date, open, high, low, close, volume, total_shares, turnover)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (r["code"], r["date"], r.get("open"), r.get("high"),
-                  r.get("low"), r.get("close"), r.get("volume"), r.get("total_shares")))
+                  r.get("low"), r.get("close"), r.get("volume"), r.get("total_shares"), r.get("turnover")))
         await db.commit()
 
 
@@ -93,7 +99,7 @@ async def get_etf_history(code: str):
     async with get_db() as db:
         db.row_factory = aiosqlite.Row
         rows = await db.execute("""
-            SELECT code, date, open, high, low, close, volume, total_shares
+            SELECT code, date, open, high, low, close, volume, total_shares, turnover
             FROM etf_daily
             WHERE code = ?
             ORDER BY date ASC

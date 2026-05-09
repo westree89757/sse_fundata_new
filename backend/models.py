@@ -18,6 +18,7 @@ class ETFDaily(BaseModel):
     close: Optional[float] = None
     volume: Optional[float] = None
     total_shares: Optional[float] = None
+    turnover: Optional[float] = None
 
 
 class ETFBasicResponse(ETFBasic):

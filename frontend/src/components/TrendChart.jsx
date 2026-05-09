@@ -113,6 +113,7 @@ export default function TrendChart({ data, etfName, indexData }) {
         成交量: d.volume ? +(d.volume / 10000).toFixed(2) : 0,
         总份额: d.total_shares ? +(d.total_shares / 1e8).toFixed(2) : 0,
         资金净流入: netFlow,
+        换手率: d.turnover != null ? +d.turnover.toFixed(2) : 0,
       };
     });
   }, [data, days]);

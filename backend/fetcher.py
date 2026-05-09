@@ -92,6 +92,7 @@ async def fetch_and_store_etf_data():
                     "close": float(row["收盘"]) if row.get("收盘") else None,
                     "volume": float(row["成交量"]) if row.get("成交量") else None,
                     "total_shares": None,
+                    "turnover": float(row["换手率"]) if row.get("换手率") else None,
                 })
             await upsert_etf_daily(records)
         except Exception as e:
