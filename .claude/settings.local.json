@@ -16,7 +16,9 @@
       "Bash(curl -s http://localhost:5174/api/etfs)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(f'{len\\(d[\\\\\"etfs\\\\\"]\\)} ETFs'\\); [print\\(f' {e[\\\\\"code\\\\\"]} {e[\\\\\"name\\\\\"]} vol={e[\\\\\"latest_volume\\\\\"]} shares={e[\\\\\"total_shares\\\\\"]/1e8 if e[\\\\\"total_shares\\\\\"] else 0:.2f}亿'\\) for e in d['etfs']]\")",
       "Bash(sleep 3 echo \"Frontend: $\\(curl -s -o /dev/null -w '%{http_code}' http://localhost:5173\\)\" echo \"API proxy: $\\(curl -s http://localhost:5173/api/etfs)",
-      "Bash(curl -s http://localhost:5173)"
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(git remote:*)",
+      "Bash(git push:*)"
     ]
   }
 }

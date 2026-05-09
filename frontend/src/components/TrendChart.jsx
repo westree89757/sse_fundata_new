@@ -101,11 +101,20 @@ export default function TrendChart({ data, etfName, indexData }) {
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
     const sliced = data.slice(-days);
-    return sliced.map((d) => ({
-      date: d.date,
-      成交量: d.volume ? +(d.volume / 10000).toFixed(2) : 0,
-      总份额: d.total_shares ? +(d.total_shares / 1e8).toFixed(2) : 0,
-    }));
+    return sliced.map((d, i) => {
+      const avgPrice = d.open && d.close ? (d.open + d.close) / 2 : 0;
+      const prevShares = i > 0 && sliced[i - 1].total_shares ? sliced[i - 1].total_shares : 0;
+      const currShares = d.total_shares || 0;
+      const netFlow = i > 0 && prevShares && currShares
+        ? +((currShares - prevShares) * avgPrice / 1e8).toFixed(3)  // 亿元
+        : 0;
+      return {
+        date: d.date,
+        成交量: d.volume ? +(d.volume / 10000).toFixed(2) : 0,
+        总份额: d.total_shares ? +(d.total_shares / 1e8).toFixed(2) : 0,
+        资金净流入: netFlow,
+      };
+    });
   }, [data, days]);
 
   const compareData = useMemo(() => {
@@ -442,19 +451,19 @@ export default function TrendChart({ data, etfName, indexData }) {
         })()}
       </div>
 
-      {/* 图2: 成交量 + 总份额 */}
+      {/* 图2: 成交量 + 资金净流入 */}
       <div className="chart-container">
-        <h3 className="chart__title">{etfName} — 成交量与份额</h3>
+        <h3 className="chart__title">{etfName} — 成交量与资金流向</h3>
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" fontSize={11} />
             <YAxis yAxisId="left" label={{ value: "成交量(万手)", angle: -90, position: "insideLeft", fontSize: 11 }} />
-            <YAxis yAxisId="right" orientation="right" label={{ value: "总份额(亿份)", angle: 90, position: "insideRight", fontSize: 11 }} />
+            <YAxis yAxisId="right" orientation="right" label={{ value: "资金净流入(亿元)", angle: 90, position: "insideRight", fontSize: 11 }} />
             <Tooltip />
             <Legend />
             <Line yAxisId="left" type="monotone" dataKey="成交量" stroke="#3b82f6" dot={false} />
-            <Line yAxisId="right" type="monotone" dataKey="总份额" stroke="#10b981" dot={false} />
+            <Line yAxisId="right" type="monotone" dataKey="资金净流入" stroke="#f59e0b" dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
