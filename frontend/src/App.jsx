@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import ETFGrid from "./components/ETFGrid";
 import TrendChart from "./components/TrendChart";
 import OverviewPanel from "./components/OverviewPanel";
 import { fetchETFList, fetchETFHistory, fetchIndexHistory, fetchHS300History, triggerRefresh } from "./api";
@@ -91,8 +90,7 @@ export default function App() {
         </div>
       )}
       <main className="app__main">
-        <OverviewPanel etfs={etfs} onSelect={setSelectedCode} />
-        <ETFGrid etfs={etfs} selectedCode={selectedCode} onSelect={setSelectedCode} />
+        <OverviewPanel etfs={etfs} selectedCode={selectedCode} onSelect={setSelectedCode} />
         <TrendChart data={history} etfName={selectedETF?.name || ""} indexData={hs300Data} szIndexData={indexData} onAlert={setAlert} />
       </main>
     </div>

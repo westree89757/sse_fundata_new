@@ -286,14 +286,16 @@ body {
 }
 
 .overview-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 10px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
   cursor: pointer;
   transition: all 0.15s;
+  background: #fff;
 }
 
-.overview-card:hover { border-color: #3b82f6; }
+.overview-card:hover { border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.overview-card.ov-selected { border-color: #3b82f6; }
 .overview-card.ov-buy { border-left: 3px solid #10b981; }
 .overview-card.ov-sell { border-left: 3px solid #ef4444; }
 
