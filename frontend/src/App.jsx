@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import ETFGrid from "./components/ETFGrid";
 import TrendChart from "./components/TrendChart";
-import { fetchETFList, fetchETFHistory, fetchIndexHistory, triggerRefresh } from "./api";
+import { fetchETFList, fetchETFHistory, fetchIndexHistory, fetchHS300History, triggerRefresh } from "./api";
 
 export default function App() {
   const [etfs, setEtfs] = useState([]);
   const [selectedCode, setSelectedCode] = useState(null);
   const [history, setHistory] = useState([]);
   const [indexData, setIndexData] = useState([]);
+  const [hs300Data, setHs300Data] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -41,6 +42,9 @@ export default function App() {
     fetchIndexHistory()
       .then(setIndexData)
       .catch(() => setIndexData([]));
+    fetchHS300History()
+      .then(setHs300Data)
+      .catch(() => setHs300Data([]));
   }, []);
 
   useEffect(() => {
@@ -79,7 +83,7 @@ export default function App() {
       </header>
       <main className="app__main">
         <ETFGrid etfs={etfs} selectedCode={selectedCode} onSelect={setSelectedCode} />
-        <TrendChart data={history} etfName={selectedETF?.name || ""} indexData={indexData} />
+        <TrendChart data={history} etfName={selectedETF?.name || ""} indexData={hs300Data} szIndexData={indexData} />
       </main>
     </div>
   );

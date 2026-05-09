@@ -35,6 +35,17 @@ async def init_db():
                 UNIQUE(code, date)
             )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS hs300_daily (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL UNIQUE,
+                open REAL,
+                high REAL,
+                low REAL,
+                close REAL,
+                volume REAL
+            )
+        """)
         # 兼容已有数据库: 如果 turnover 列不存在则添加
         try:
             await db.execute("ALTER TABLE etf_daily ADD COLUMN turnover REAL")
@@ -135,6 +146,28 @@ async def get_index_history():
         rows = await db.execute("""
             SELECT date, open, high, low, close, volume
             FROM index_daily
+            ORDER BY date ASC
+        """)
+        return [dict(row) for row in await rows.fetchall()]
+
+
+async def upsert_hs300_daily(records: list[dict]):
+    async with get_db() as db:
+        for r in records:
+            await db.execute("""
+                INSERT OR REPLACE INTO hs300_daily (date, open, high, low, close, volume)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (r["date"], r.get("open"), r.get("high"),
+                  r.get("low"), r.get("close"), r.get("volume")))
+        await db.commit()
+
+
+async def get_hs300_history():
+    async with get_db() as db:
+        db.row_factory = aiosqlite.Row
+        rows = await db.execute("""
+            SELECT date, open, high, low, close, volume
+            FROM hs300_daily
             ORDER BY date ASC
         """)
         return [dict(row) for row in await rows.fetchall()]

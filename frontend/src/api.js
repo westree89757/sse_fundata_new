@@ -19,6 +19,12 @@ export async function fetchIndexHistory() {
   return res.json();
 }
 
+export async function fetchHS300History() {
+  const res = await fetch(`${BASE}/hs300`);
+  if (!res.ok) throw new Error(`Failed to fetch HS300 history: ${res.status}`);
+  return res.json();
+}
+
 export async function triggerRefresh() {
   const res = await fetch(`${BASE}/refresh`, { method: "POST" });
   if (!res.ok) throw new Error(`Failed to refresh: ${res.status}`);

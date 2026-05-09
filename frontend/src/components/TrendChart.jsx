@@ -66,7 +66,7 @@ function PhaseTooltip({ active, payload, label }) {
         </span>
       </div>
       <div className="tooltip-row">
-        <span className="tooltip-label" style={{ color: "#ef4444" }}>上证区间累计</span>
+        <span className="tooltip-label" style={{ color: "#ef4444" }}>沪深300累计</span>
         <span className="tooltip-val" style={{ color: "#ef4444" }}>
           {data["指数累计%"] > 0 ? "+" : ""}{data["指数累计%"]}%
         </span>
@@ -84,7 +84,7 @@ function PhaseTooltip({ active, payload, label }) {
             </span>
           </div>
           <div className="tooltip-row">
-            <span className="tooltip-label" style={{ color: "#ef4444" }}>上证收益</span>
+            <span className="tooltip-label" style={{ color: "#ef4444" }}>沪深300收益</span>
             <span className="tooltip-val" style={{ color: data["增持起点收益指数%"] >= 0 ? "#ef4444" : "#10b981" }}>
               {data["增持起点收益指数%"] > 0 ? "+" : ""}{data["增持起点收益指数%"]}%
             </span>
@@ -95,7 +95,7 @@ function PhaseTooltip({ active, payload, label }) {
   );
 }
 
-export default function TrendChart({ data, etfName, indexData }) {
+export default function TrendChart({ data, etfName, indexData, szIndexData }) {
   const [days, setDays] = useState(65);  // 默认近13周
 
   const chartData = useMemo(() => {
@@ -399,7 +399,7 @@ export default function TrendChart({ data, etfName, indexData }) {
               ))}
 
               <Line type="monotone" dataKey="ETF累计%" stroke="#10b981" dot={false} strokeWidth={2} name="ETF累计%" />
-              <Line type="monotone" dataKey="指数累计%" stroke="#ef4444" dot={false} strokeWidth={2} name="指数累计%" />
+              <Line type="monotone" dataKey="指数累计%" stroke="#ef4444" dot={false} strokeWidth={2} name="沪深300累计%" />
             </LineChart>
           </ResponsiveContainer>
         ) : (
@@ -472,7 +472,7 @@ export default function TrendChart({ data, etfName, indexData }) {
       {/* 图3: 日变化 */}
       <div className="chart-container">
         <h3 className="chart__title">
-          {etfName} — 份额 vs 上证指数 日变化
+          {etfName} — 份额 vs 沪深300 日变化
           {correlation !== null && (
             <span className="chart__corr" style={{ color: correlation < 0 ? "#ef4444" : "#10b981" }}>
               {" "}r = {correlation.toFixed(3)}

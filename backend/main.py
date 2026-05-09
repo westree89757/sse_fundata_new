@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.database import init_db, get_all_etfs, get_etf_history, get_index_history
+from backend.database import init_db, get_all_etfs, get_etf_history, get_index_history, get_hs300_history
 from backend.models import ETFListResponse, ETFBasicResponse, ETFDaily, IndexDaily
 from backend.scheduler import setup_scheduler
-from backend.fetcher import fetch_and_store_etf_data, fetch_and_store_index_data
+from backend.fetcher import fetch_and_store_etf_data, fetch_and_store_index_data, fetch_and_store_hs300_data
 
 
 @asynccontextmanager
@@ -19,6 +19,9 @@ async def lifespan(app: FastAPI):
         idx = await get_index_history()
         if not idx:
             await fetch_and_store_index_data()
+        hs300 = await get_hs300_history()
+        if not hs300:
+            await fetch_and_store_hs300_data()
     except Exception:
         pass
     yield
@@ -53,11 +56,18 @@ async def index_history():
     return [IndexDaily(**r) for r in records]
 
 
+@app.get("/api/hs300")
+async def hs300_history():
+    records = await get_hs300_history()
+    return [IndexDaily(**r) for r in records]
+
+
 @app.post("/api/refresh")
 async def refresh_data():
     count = await fetch_and_store_etf_data()
     idx_count = await fetch_and_store_index_data()
-    return {"status": "ok", "etf_count": count, "index_count": idx_count}
+    hs300_count = await fetch_and_store_hs300_data()
+    return {"status": "ok", "etf_count": count, "index_count": idx_count, "hs300_count": hs300_count}
 
 
 if __name__ == "__main__":
