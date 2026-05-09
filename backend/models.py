@@ -7,6 +7,7 @@ class ETFBasic(BaseModel):
     name: str
     total_shares: Optional[float] = None
     nav: Optional[float] = None
+    premium: Optional[float] = None
 
 
 class ETFDaily(BaseModel):

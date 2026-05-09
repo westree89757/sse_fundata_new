@@ -65,6 +65,9 @@ export default function OverviewPanel({ etfs, selectedCode, onSelect, onDataChan
           const sharesDisplay = etf.total_shares
             ? (etf.total_shares / 1e8).toFixed(2) + " 亿份"
             : "N/A";
+          const premiumDisplay = etf.premium != null
+            ? (etf.premium > 0 ? "+" : "") + etf.premium.toFixed(2) + "%"
+            : "N/A";
 
           return (
             <div
@@ -82,6 +85,12 @@ export default function OverviewPanel({ etfs, selectedCode, onSelect, onDataChan
                 <div className="ov-stat">
                   <span className="ov-label">总份额</span>
                   <span className="ov-val">{sharesDisplay}</span>
+                </div>
+                <div className="ov-stat">
+                  <span className="ov-label">折溢价</span>
+                  <span className="ov-val" style={{ color: etf.premium > 0 ? "#ef4444" : etf.premium < 0 ? "#10b981" : "#64748b" }}>
+                    {premiumDisplay}
+                  </span>
                 </div>
                 {d ? (
                   <>

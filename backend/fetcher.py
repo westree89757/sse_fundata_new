@@ -62,6 +62,7 @@ async def fetch_and_store_etf_data():
             "name": str(row["基金简称"]),
             "total_shares": None,
             "nav": _safe_float(row.get(nav_col)) if nav_col in df_csi300.columns else None,
+            "premium": _safe_float(row.get("折价率")),
         })
 
     # 2. 拉取每只ETF近一年日线数据 (含成交量)

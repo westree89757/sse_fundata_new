@@ -17,6 +17,7 @@ async def init_db():
                 name TEXT NOT NULL,
                 total_shares REAL,
                 nav REAL,
+                premium REAL,
                 update_date TEXT
             )
         """)
@@ -46,11 +47,12 @@ async def init_db():
                 volume REAL
             )
         """)
-        # 兼容已有数据库: 如果 turnover 列不存在则添加
-        try:
-            await db.execute("ALTER TABLE etf_daily ADD COLUMN turnover REAL")
-        except Exception:
-            pass  # 列已存在
+        # 兼容已有数据库
+        for col, table in [("turnover", "etf_daily"), ("premium", "etf_basic")]:
+            try:
+                await db.execute(f"ALTER TABLE {table} ADD COLUMN {col} REAL")
+            except Exception:
+                pass
         await db.execute("""
             CREATE TABLE IF NOT EXISTS index_daily (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,9 +71,9 @@ async def upsert_etf_basic(etfs: list[dict]):
     async with get_db() as db:
         for etf in etfs:
             await db.execute("""
-                INSERT OR REPLACE INTO etf_basic (code, name, total_shares, nav, update_date)
-                VALUES (?, ?, ?, ?, date('now'))
-            """, (etf["code"], etf["name"], etf.get("total_shares"), etf.get("nav")))
+                INSERT OR REPLACE INTO etf_basic (code, name, total_shares, nav, premium, update_date)
+                VALUES (?, ?, ?, ?, ?, date('now'))
+            """, (etf["code"], etf["name"], etf.get("total_shares"), etf.get("nav"), etf.get("premium")))
         await db.commit()
 
 
@@ -90,7 +92,7 @@ async def get_all_etfs():
     async with get_db() as db:
         db.row_factory = aiosqlite.Row
         rows = await db.execute("""
-            SELECT b.code, b.name, b.total_shares, b.nav,
+            SELECT b.code, b.name, b.total_shares, b.nav, b.premium,
                    d.volume as latest_volume, d.date as latest_date
             FROM etf_basic b
             LEFT JOIN (
