@@ -18,7 +18,9 @@
       "Bash(sleep 3 echo \"Frontend: $\\(curl -s -o /dev/null -w '%{http_code}' http://localhost:5173\\)\" echo \"API proxy: $\\(curl -s http://localhost:5173/api/etfs)",
       "Bash(curl -s http://localhost:5173)",
       "Bash(git remote:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --proxy http://127.0.0.1:7897 https://push2his.eastmoney.com)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://push2his.eastmoney.com)"
     ]
   }
 }
