@@ -98,6 +98,9 @@ function PhaseTooltip({ active, payload, label }) {
 export default function TrendChart({ data, etfName, indexData, szIndexData, onAlert }) {
   const [days, setDays] = useState(65);  // 默认近13周
 
+  // HS300 优先, 没有则 fallback 到上证
+  const activeIndex = (indexData && indexData.length > 0) ? indexData : (szIndexData || []);
+
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
     const sliced = data.slice(-days);
@@ -119,13 +122,13 @@ export default function TrendChart({ data, etfName, indexData, szIndexData, onAl
   }, [data, days]);
 
   const compareData = useMemo(() => {
-    if (!data || data.length === 0 || !indexData || indexData.length === 0) return [];
+    if (!data || data.length === 0 || activeIndex.length === 0) return [];
 
     const etfMap = new Map();
     data.forEach((d) => { if (d.total_shares) etfMap.set(d.date, d.total_shares); });
 
     const indexMap = new Map();
-    indexData.forEach((d) => { if (d.close) indexMap.set(d.date, d.close); });
+    activeIndex.forEach((d) => { if (d.close) indexMap.set(d.date, d.close); });
 
     const commonDates = [...etfMap.keys()]
       .filter((d) => indexMap.has(d))
@@ -151,7 +154,7 @@ export default function TrendChart({ data, etfName, indexData, szIndexData, onAl
         "上证指数": idxPt,
       };
     });
-  }, [data, indexData, days]);
+  }, [data, activeIndex, days]);
 
   const correlation = useMemo(() => {
     if (compareData.length < 5) return null;
@@ -170,14 +173,14 @@ export default function TrendChart({ data, etfName, indexData, szIndexData, onAl
 
   // 阶段分析: 使用全部数据计算滚动份额变化，检测阶段和关键信号
   const { phaseData, phaseAreas, markers } = useMemo(() => {
-    if (!data || data.length === 0 || !indexData || indexData.length === 0)
+    if (!data || data.length === 0 || activeIndex.length === 0)
       return { phaseData: [], phaseAreas: [], markers: [] };
 
     const etfMap = new Map();
     data.forEach((d) => { if (d.total_shares) etfMap.set(d.date, d.total_shares); });
 
     const indexMap = new Map();
-    indexData.forEach((d) => { if (d.close) indexMap.set(d.date, d.close); });
+    activeIndex.forEach((d) => { if (d.close) indexMap.set(d.date, d.close); });
 
     const allDates = [...etfMap.keys()]
       .filter((d) => indexMap.has(d))
@@ -322,7 +325,7 @@ export default function TrendChart({ data, etfName, indexData, szIndexData, onAl
     const allMarkers = [...mkrs, ...aggressiveSells];
 
     return { phaseData: pData, phaseAreas: areas, markers: allMarkers };
-  }, [data, indexData, days]);
+  }, [data, activeIndex, days]);
 
   // 预警通知: 检测到连续极端信号时触发
   useEffect(() => {
