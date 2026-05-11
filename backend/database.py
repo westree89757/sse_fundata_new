@@ -258,12 +258,16 @@ async def auto_import_from_json():
         print(f"  Imported SSE shares for {len(shares)} ETFs")
 
     # 更新 ETF basic 信息
+    etf_names = data.get("etf_names", {})
     etf_basic_list = []
     for code in data.get("etf_codes", []):
-        latest_shares = None
-        for entries in shares.get(code, []):
-            pass  # 从 daily 中取最新份额
-        etf_basic_list.append({"code": code, "name": code, "total_shares": None, "nav": None, "premium": None})
+        etf_basic_list.append({
+            "code": code,
+            "name": etf_names.get(code, code),
+            "total_shares": None,
+            "nav": None,
+            "premium": None,
+        })
     if etf_basic_list:
         await upsert_etf_basic(etf_basic_list)
 

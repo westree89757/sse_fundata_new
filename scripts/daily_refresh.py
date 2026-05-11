@@ -25,8 +25,11 @@ def main():
     print("Fetching ETF list...")
     df = ak.fund_etf_fund_daily_em()
     mask = df["基金简称"].apply(lambda x: any(k in str(x) for k in CSI300_KEYWORDS))
-    all_codes = [str(c) for c in df[mask]["基金代码"].tolist() if str(c).startswith("5")]
-    codes = sorted(all_codes)[:7]
+    df_csi300 = df[mask].copy()
+    df_csi300 = df_csi300[df_csi300["基金代码"].astype(str).str.startswith("5")]
+    df_csi300 = df_csi300.sort_values("基金代码").head(7)
+    codes = [str(c) for c in df_csi300["基金代码"].tolist()]
+    etf_names = {str(c): str(n) for c, n in zip(df_csi300["基金代码"], df_csi300["基金简称"])}
     print(f"  {len(codes)} ETFs: {codes}")
 
     # 2. ETF 日线
@@ -75,6 +78,7 @@ def main():
     result = {
         "generated": today,
         "etf_codes": codes,
+        "etf_names": etf_names,
         "etf_daily": etf_daily,
         "index_000001": index_000001,
         "index_000300": index_000300,
