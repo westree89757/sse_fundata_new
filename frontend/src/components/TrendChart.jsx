@@ -77,6 +77,26 @@ function PhaseTooltip({ active, payload, label }) {
           {data["跟踪误差%"] > 0 ? "+" : ""}{data["跟踪误差%"]}%
         </span>
       </div>
+      {data["赎回起点"] && (
+        <>
+          <div className="tooltip-divider" />
+          <div className="tooltip-date" style={{ fontSize: 11, fontWeight: 400, color: "#64748b", marginBottom: 2 }}>
+            自 {data["赎回起点"]} 获利赎回以来
+          </div>
+          <div className="tooltip-row">
+            <span className="tooltip-label" style={{ color: "#10b981" }}>ETF涨跌</span>
+            <span className="tooltip-val" style={{ color: data["赎回起点收益ETF%"] >= 0 ? "#10b981" : "#ef4444" }}>
+              {data["赎回起点收益ETF%"] > 0 ? "+" : ""}{data["赎回起点收益ETF%"]}%
+            </span>
+          </div>
+          <div className="tooltip-row">
+            <span className="tooltip-label" style={{ color: "#ef4444" }}>沪深300收益</span>
+            <span className="tooltip-val" style={{ color: data["赎回起点收益指数%"] >= 0 ? "#ef4444" : "#10b981" }}>
+              {data["赎回起点收益指数%"] > 0 ? "+" : ""}{data["赎回起点收益指数%"]}%
+            </span>
+          </div>
+        </>
+      )}
       {data["增持起点"] && (
         <>
           <div className="tooltip-divider" />
@@ -214,9 +234,11 @@ export default function TrendChart({ data, etfName, indexData, szIndexData }) {
       else phaseMap.set(allDates[i + ROLLING], "中性");
     }
 
-    // 找出所有机构增持阶段的起点日期 (全量数据)
+    // 找出所有阶段起点日期 (全量数据)
     const zengchiStarts = [];
+    const shuhuiStarts = [];
     let inZC = false;
+    let inSH = false;
     for (let i = 0; i < rollChg.length; i++) {
       const ph = phaseMap.get(allDates[i + ROLLING]);
       if (ph === "机构增持" && !inZC) {
@@ -224,6 +246,12 @@ export default function TrendChart({ data, etfName, indexData, szIndexData }) {
         inZC = true;
       } else if (ph !== "机构增持") {
         inZC = false;
+      }
+      if (ph === "获利赎回" && !inSH) {
+        shuhuiStarts.push(allDates[i + ROLLING]);
+        inSH = true;
+      } else if (ph !== "获利赎回") {
+        inSH = false;
       }
     }
 
@@ -237,8 +265,15 @@ export default function TrendChart({ data, etfName, indexData, szIndexData }) {
       for (const zc of zengchiStarts) {
         if (zc <= date) lastZC = zc;
       }
+      // 找上一个获利赎回起点
+      let lastSH = null;
+      for (const sh of shuhuiStarts) {
+        if (sh <= date) lastSH = sh;
+      }
       const zcETF = lastZC ? etfMap.get(lastZC) / 1e8 : null;
       const zcIdx = lastZC ? indexMap.get(lastZC) : null;
+      const shETF = lastSH ? etfMap.get(lastSH) / 1e8 : null;
+      const shIdx = lastSH ? indexMap.get(lastSH) : null;
       const curETF = etfMap.get(date) / 1e8;
       const curIdx = indexMap.get(date);
       return {
@@ -249,6 +284,9 @@ export default function TrendChart({ data, etfName, indexData, szIndexData }) {
         "增持起点收益ETF%": lastZC && zcETF ? +((curETF / zcETF - 1) * 100).toFixed(2) : null,
         "增持起点收益指数%": lastZC && zcIdx ? +((curIdx / zcIdx - 1) * 100).toFixed(2) : null,
         "增持起点": lastZC,
+        "赎回起点收益ETF%": lastSH && shETF ? +((curETF / shETF - 1) * 100).toFixed(2) : null,
+        "赎回起点收益指数%": lastSH && shIdx ? +((curIdx / shIdx - 1) * 100).toFixed(2) : null,
+        "赎回起点": lastSH,
         "阶段": phaseMap.get(date) || "—",
       };
     });
