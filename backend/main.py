@@ -83,6 +83,15 @@ async def refresh_status():
     return {"refreshing": _refreshing}
 
 
+@app.get("/api/scheduler/status")
+async def scheduler_status():
+    from backend.scheduler import scheduler
+    jobs = []
+    for job in scheduler.get_jobs():
+        jobs.append({"id": job.id, "next_run": str(job.next_run_time)})
+    return {"running": scheduler.running, "jobs": jobs}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
