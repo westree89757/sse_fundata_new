@@ -109,17 +109,19 @@ async def fetch_and_store_etf_data():
         await upsert_etf_basic(etf_basic_list)
         return len(etf_basic_list)
 
-    # 3. SSE 份额 (用 AKShare fund_etf_scale_sse)
+    # 3. SSE 份额 (每 20 天采样 ~10-12 个点以减少 API 调用, 每次 ~10s)
     all_dates.sort()
-    sample_dates = all_dates[::5]
+    sample_dates = all_dates[::20]
     if all_dates[-1] not in sample_dates: sample_dates.append(all_dates[-1])
+    if all_dates[0] not in sample_dates: sample_dates.insert(0, all_dates[0])
 
     shares_map = {code: {} for code in etf_codes}
     for date_str in sample_dates:
         try:
             d = date_str.replace("-", "")
             df_scale = ak.fund_etf_scale_sse(date=d)
-            if df_scale.empty:
+            if df_scale is None or df_scale.empty:
+                print(f"  SSE {date_str}: empty (non-trading day?)")
                 continue
             for _, item in df_scale.iterrows():
                 c = str(item.get("基金代码", ""))

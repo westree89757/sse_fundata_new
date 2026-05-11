@@ -81,8 +81,15 @@ async def upsert_etf_daily(records: list[dict]):
     async with get_db() as db:
         for r in records:
             await db.execute("""
-                INSERT OR REPLACE INTO etf_daily (code, date, open, high, low, close, volume, total_shares, turnover)
+                INSERT INTO etf_daily (code, date, open, high, low, close, volume, total_shares, turnover)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(code, date) DO UPDATE SET
+                    open = excluded.open,
+                    high = excluded.high,
+                    low = excluded.low,
+                    close = excluded.close,
+                    volume = excluded.volume,
+                    turnover = excluded.turnover
             """, (r["code"], r["date"], r.get("open"), r.get("high"),
                   r.get("low"), r.get("close"), r.get("volume"), r.get("total_shares"), r.get("turnover")))
         await db.commit()
