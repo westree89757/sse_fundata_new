@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import TrendChart from "./components/TrendChart";
 import OverviewPanel from "./components/OverviewPanel";
-import { fetchETFList, fetchETFHistory, fetchIndexHistory, fetchHS300History, triggerRefresh } from "./api";
+import { fetchETFList, fetchETFHistory, fetchIndexHistory, fetchHS300History, triggerRefresh, fetchRefreshStatus } from "./api";
 
 export default function App() {
   const [etfs, setEtfs] = useState([]);
@@ -77,9 +77,26 @@ export default function App() {
 
   const handleRefresh = async () => {
     setLoading(true);
-    await triggerRefresh();
-    await loadETFList();
-    setLoading(false);
+    const { status } = await triggerRefresh();
+    if (status === "already_refreshing") {
+      setLoading(false);
+      return;
+    }
+    // 轮询直到刷新完成
+    const poll = setInterval(async () => {
+      try {
+        const s = await fetchRefreshStatus();
+        if (!s.refreshing) {
+          clearInterval(poll);
+          await loadETFList();
+          // 重新加载全部数据以更新图表
+          window.location.reload();
+        }
+      } catch {
+        clearInterval(poll);
+        setLoading(false);
+      }
+    }, 2000);
   };
 
   const selectedETF = etfs.find((e) => e.code === selectedCode);

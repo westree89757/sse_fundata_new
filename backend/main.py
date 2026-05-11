@@ -1,3 +1,5 @@
+import asyncio
+import threading
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,6 +7,9 @@ from backend.database import init_db, get_all_etfs, get_etf_history, get_index_h
 from backend.models import ETFListResponse, ETFBasicResponse, ETFDaily, IndexDaily
 from backend.scheduler import setup_scheduler
 from backend.fetcher import fetch_and_store_etf_data, fetch_and_store_index_data, fetch_and_store_hs300_data
+
+_refreshing = False
+_refresh_lock = threading.Lock()
 
 
 @asynccontextmanager
@@ -49,12 +54,33 @@ async def hs300_history():
     return [IndexDaily(**r) for r in records]
 
 
+def _run_refresh_in_thread():
+    """在独立线程中运行数据刷新，避免阻塞事件循环"""
+    global _refreshing
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(fetch_and_store_etf_data())
+        loop.run_until_complete(fetch_and_store_index_data())
+        loop.run_until_complete(fetch_and_store_hs300_data())
+    finally:
+        loop.close()
+        _refreshing = False
+
+
 @app.post("/api/refresh")
 async def refresh_data():
-    count = await fetch_and_store_etf_data()
-    idx_count = await fetch_and_store_index_data()
-    hs300_count = await fetch_and_store_hs300_data()
-    return {"status": "ok", "etf_count": count, "index_count": idx_count, "hs300_count": hs300_count}
+    global _refreshing
+    if _refreshing:
+        return {"status": "already_refreshing"}
+    _refreshing = True
+    threading.Thread(target=_run_refresh_in_thread, daemon=True).start()
+    return {"status": "started"}
+
+
+@app.get("/api/refresh/status")
+async def refresh_status():
+    return {"refreshing": _refreshing}
 
 
 if __name__ == "__main__":

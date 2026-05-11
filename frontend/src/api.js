@@ -30,3 +30,8 @@ export async function triggerRefresh() {
   if (!res.ok) throw new Error(`Failed to refresh: ${res.status}`);
   return res.json();
 }
+
+export async function fetchRefreshStatus() {
+  const res = await fetch(`${BASE}/refresh/status`);
+  return res.json();
+}
