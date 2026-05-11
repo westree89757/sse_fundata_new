@@ -15,6 +15,8 @@ _refresh_lock = threading.Lock()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    from backend.database import auto_import_from_json
+    await auto_import_from_json()
     setup_scheduler()
     yield
 

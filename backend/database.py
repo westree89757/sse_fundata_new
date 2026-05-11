@@ -180,3 +180,91 @@ async def get_hs300_history():
             ORDER BY date ASC
         """)
         return [dict(row) for row in await rows.fetchall()]
+
+
+async def auto_import_from_json():
+    """如果 data/latest.json 比 DB 数据更新，自动导入"""
+    import json
+    json_path = os.path.join(os.path.dirname(__file__), "..", "data", "latest.json")
+    if not os.path.exists(json_path):
+        return
+
+    async with get_db() as db:
+        db.row_factory = aiosqlite.Row
+        row = await db.execute("SELECT MAX(date) as latest FROM etf_daily")
+        db_latest = (await row.fetchone())["latest"]
+
+    with open(json_path) as f:
+        data = json.load(f)
+
+    json_date = data.get("generated", "")
+    if db_latest and json_date <= db_latest:
+        return  # DB 已经是最新
+
+    print(f"Importing data/latest.json (generated={json_date}, DB latest={db_latest})...")
+
+    # 导入 ETF 日线
+    daily_records = []
+    for code, rows in data.get("etf_daily", {}).items():
+        for r in rows:
+            daily_records.append({
+                "code": code, "date": r["date"],
+                "open": r.get("open"), "high": r.get("high"),
+                "low": r.get("low"), "close": r.get("close"),
+                "volume": r.get("volume"), "total_shares": None,
+                "turnover": r.get("amount"),
+            })
+    if daily_records:
+        await upsert_etf_daily(daily_records)
+        print(f"  Imported {len(daily_records)} ETF daily rows")
+
+    # 导入指数
+    for symbol, table_func in [("000001", upsert_index_daily), ("000300", upsert_hs300_daily)]:
+        key = f"index_{symbol}"
+        records = data.get(key, [])
+        if records:
+            await table_func(records)
+            print(f"  Imported {len(records)} {symbol} index rows")
+
+    # 导入 SSE 份额
+    shares = data.get("shares", {})
+    if shares:
+        # 构建日期列表
+        all_dates = sorted(set(r["date"] for rows in data.get("etf_daily", {}).values() for r in rows))
+        for code, entries in shares.items():
+            s_map = {e["date"]: e["shares"] for e in entries}
+            sorted_keys = sorted(s_map.keys())
+            share_recs = []
+            for date_str in all_dates:
+                if date_str in s_map:
+                    shares_val = s_map[date_str]
+                else:
+                    prev_d = prev_v = next_d = next_v = None
+                    for d in sorted_keys:
+                        if d <= date_str: prev_d, prev_v = d, s_map[d]
+                    for d in sorted_keys:
+                        if d >= date_str and next_d is None: next_d, next_v = d, s_map[d]
+                    if prev_v is not None and next_v is not None and prev_d != next_d:
+                        try:
+                            ratio = (all_dates.index(date_str) - all_dates.index(prev_d)) / max(all_dates.index(next_d) - all_dates.index(prev_d), 1)
+                            shares_val = prev_v + (next_v - prev_v) * ratio
+                        except ValueError: shares_val = prev_v
+                    elif prev_v is not None: shares_val = prev_v
+                    elif next_v is not None: shares_val = next_v
+                    else: shares_val = None
+                share_recs.append({"code": code, "date": date_str, "total_shares": shares_val})
+            if share_recs:
+                await update_etf_shares(share_recs)
+        print(f"  Imported SSE shares for {len(shares)} ETFs")
+
+    # 更新 ETF basic 信息
+    etf_basic_list = []
+    for code in data.get("etf_codes", []):
+        latest_shares = None
+        for entries in shares.get(code, []):
+            pass  # 从 daily 中取最新份额
+        etf_basic_list.append({"code": code, "name": code, "total_shares": None, "nav": None, "premium": None})
+    if etf_basic_list:
+        await upsert_etf_basic(etf_basic_list)
+
+    print("Auto-import complete")
