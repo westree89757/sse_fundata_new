@@ -1,5 +1,6 @@
 import akshare as ak
 from datetime import datetime, timedelta
+from backend.sources import fetch_etf_daily as _source_fetch_etf, fetch_index_daily as _source_fetch_index
 
 CSI300_KEYWORDS = ["沪深300", "沪深 300", "CSI300", "CSI 300"]
 
@@ -11,44 +12,13 @@ def _safe_float(val) -> float | None:
 
 
 def _fetch_etf_daily(code: str, start: str, end: str) -> list[dict]:
-    """使用 Sina 财经 API 拉取 ETF 日线"""
-    df = ak.fund_etf_hist_sina(symbol=f"sh{code}")
-    if df.empty:
-        return []
-    df["date"] = df["date"].astype(str)
-    df = df[(df["date"] >= start) & (df["date"] <= end)]
-    records = []
-    for _, row in df.iterrows():
-        records.append({
-            "date": str(row["date"]),
-            "open": _safe_float(row["open"]),
-            "close": _safe_float(row["close"]),
-            "high": _safe_float(row["high"]),
-            "low": _safe_float(row["low"]),
-            "volume": _safe_float(row["volume"]),
-            "amount": _safe_float(row.get("amount")),
-        })
-    return records
+    """ETF 日线: mootdx > 腾讯财经 > 新浪 (自动降级)"""
+    return _source_fetch_etf(code, start, end)
 
 
 def _fetch_index_daily(symbol: str, start: str, end: str) -> list[dict]:
-    """使用 AKShare 拉取指数日线 (非 push2his 源)"""
-    df = ak.stock_zh_index_daily(symbol=f"sh{symbol}")
-    if df.empty:
-        return []
-    df["date"] = df["date"].astype(str)
-    df = df[(df["date"] >= start) & (df["date"] <= end)]
-    records = []
-    for _, row in df.iterrows():
-        records.append({
-            "date": str(row["date"]),
-            "open": _safe_float(row["open"]),
-            "close": _safe_float(row["close"]),
-            "high": _safe_float(row["high"]),
-            "low": _safe_float(row["low"]),
-            "volume": _safe_float(row["volume"]),
-        })
-    return records
+    """指数日线: mootdx > 腾讯财经 > AKShare (自动降级)"""
+    return _source_fetch_index(symbol, start, end)
 
 
 async def fetch_and_store_etf_data():
