@@ -130,12 +130,17 @@
 
 **时间**: 2026-05-11 ~ 05-12  
 **问题**: 多次 `git push` 失败：`LibreSSL SSL_connect: SSL_ERROR_SYSCALL in connection to github.com:443`  
-**原因**: 网络环境（代理/VPN）间歇性阻断到 GitHub 的 HTTPS 连接  
-**应对**: 重试通常能解决；SSH 备用但需要配置 SSH key  
+**原因**: 
+  1. Git 走代理时 SSL 握手失败（代理软件与 GitHub 的 TLS 不兼容）
+  2. Git/LibreSSL 走 HTTP/2 时偶发 SSL_ERROR_SYSCALL
+**修复**: 
+  - `git -c http.proxy= -c https.proxy= push` — 强制直连不走代理
+  - `git config --local http.version HTTP/1.1` — 降级到 HTTP/1.1 避免 LibreSSL HTTP/2 兼容问题
 **经验**:
-- GitHub HTTPS 在某些网络环境下不稳定
-- 可以同时配置 HTTPS 和 SSH 两个 remote 互为备份
-- `GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"` 可以跳过 SSH 主机验证
+- GitHub HTTPS 在某些代理/VPN 环境下不稳定，直连反而更可靠
+- LibreSSL（macOS 自带）对 HTTP/2 的实现有 bug，降级 HTTP/1.1 即可解决
+- `curl` 和 `git` 可能走不同的 SSL 库（curl 用 OpenSSL，git 用 LibreSSL），一个能通不代表另一个能通
+- 仓库级 `git config` 可以固化这些设置，避免每次手动传参
 
 ---
 
