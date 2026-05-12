@@ -32,13 +32,15 @@ def _mootdx_etf(code: str, start: str, end: str) -> list[dict] | None:
             date_str = f"{int(row['year']):04d}-{int(row['month']):02d}-{int(row['day']):02d}"
             if date_str < start or date_str > end:
                 continue
+            vol = _safe_float(row.get("volume") or row.get("vol"))
+            # mootdx freq=9 返回手(100股), 统一转为股以匹配 Sina/腾讯格式
             records.append({
                 "date": date_str,
                 "open": _safe_float(row.get("open")),
                 "close": _safe_float(row.get("close")),
                 "high": _safe_float(row.get("high")),
                 "low": _safe_float(row.get("low")),
-                "volume": _safe_float(row.get("volume") or row.get("vol")),
+                "volume": vol * 100 if vol else None,
                 "amount": _safe_float(row.get("amount")),
             })
         return records if records else None
@@ -60,13 +62,14 @@ def _mootdx_index(symbol: str, start: str, end: str) -> list[dict] | None:
             date_str = f"{int(row['year']):04d}-{int(row['month']):02d}-{int(row['day']):02d}"
             if date_str < start or date_str > end:
                 continue
+            vol = _safe_float(row.get("volume") or row.get("vol"))
             records.append({
                 "date": date_str,
                 "open": _safe_float(row.get("open")),
                 "close": _safe_float(row.get("close")),
                 "high": _safe_float(row.get("high")),
                 "low": _safe_float(row.get("low")),
-                "volume": _safe_float(row.get("volume") or row.get("vol")),
+                "volume": vol * 100 if vol else None,
             })
         return records if records else None
     except Exception as e:
