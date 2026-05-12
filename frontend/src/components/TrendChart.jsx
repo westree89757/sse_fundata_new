@@ -234,41 +234,20 @@ export default function TrendChart({ data, etfName, indexData, szIndexData }) {
       else phaseMap.set(allDates[i + ROLLING], "中性");
     }
 
-    // 找出所有阶段起点日期 (全量数据)
-    const zengchiStarts = [];
-    const shuhuiStarts = [];
-    let inZC = false;
-    let inSH = false;
-    for (let i = 0; i < rollChg.length; i++) {
-      const ph = phaseMap.get(allDates[i + ROLLING]);
-      if (ph === "机构增持" && !inZC) {
-        zengchiStarts.push(allDates[i + ROLLING]);
-        inZC = true;
-      } else if (ph !== "机构增持") {
-        inZC = false;
-      }
-      if (ph === "获利赎回" && !inSH) {
-        shuhuiStarts.push(allDates[i + ROLLING]);
-        inSH = true;
-      } else if (ph !== "获利赎回") {
-        inSH = false;
-      }
-    }
-
     // 构建 phaseData (仅 selected range 内的数据)
     const sliced = allDates.slice(-days);
-    const pData = sliced.map((date) => {
+    const pData = sliced.map((date, idx) => {
       const baseETF = etfMap.get(sliced[0]) / 1e8;
       const baseIdx = indexMap.get(sliced[0]);
-      // 找上一个机构增持起点
+      const curPhase = phaseMap.get(date) || "—";
+      // 从可视范围内扫描阶段起点 (与 ReferenceArea 保持一致)
       let lastZC = null;
-      for (const zc of zengchiStarts) {
-        if (zc <= date) lastZC = zc;
-      }
-      // 找上一个获利赎回起点
       let lastSH = null;
-      for (const sh of shuhuiStarts) {
-        if (sh <= date) lastSH = sh;
+      for (let j = idx; j >= 0; j--) {
+        const pj = phaseMap.get(sliced[j]) || "—";
+        if (pj !== curPhase) break;
+        if (curPhase === "机构增持") lastZC = sliced[j];
+        if (curPhase === "获利赎回") lastSH = sliced[j];
       }
       const zcETF = lastZC ? etfMap.get(lastZC) / 1e8 : null;
       const zcIdx = lastZC ? indexMap.get(lastZC) : null;
